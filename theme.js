@@ -258,6 +258,13 @@ export const getDriverCloudinaryUrl = (driverCode, width = 720) => {
   return `https://media.formula1.com/image/upload/c_fill,w_${width}/q_auto/v1740000000/common/f1/2025/${team}/${code}01/2025${team}${code}01right.webp`;
 };
 
+const MISSING_2025_HEADSHOTS = new Set([
+  'colapinto'
+]);
+
+const buildF1HeadshotUrl = (season, slug) =>
+  `https://www.formula1.com/content/dam/fom-website/drivers/${season}Drivers/${slug}.png.transform/2col/image.png`;
+
 export const getDriverHeadshotUrl = (driver, options = {}) => {
   const { width = 720 } = options;
 
@@ -267,8 +274,9 @@ export const getDriverHeadshotUrl = (driver, options = {}) => {
   if (typeof driver === 'string') {
     const lastName = driver.split(' ').pop();
     if (!lastName) return null;
-    // Try 2025 first, with 2024 as fallback in onError handler
-    return `https://www.formula1.com/content/dam/fom-website/drivers/2025Drivers/${lastName.toLowerCase()}.png.transform/2col/image.png`;
+    const slug = lastName.toLowerCase();
+    const primarySeason = MISSING_2025_HEADSHOTS.has(slug) ? '2024' : '2025';
+    return buildF1HeadshotUrl(primarySeason, slug);
   }
 
   // Extract family name for fallback
@@ -281,8 +289,9 @@ export const getDriverHeadshotUrl = (driver, options = {}) => {
 
   if (!familyName) return null;
 
-  // Return 2025 URL - components will handle fallback to 2024 in onError
-  return `https://www.formula1.com/content/dam/fom-website/drivers/2025Drivers/${familyName.toLowerCase()}.png.transform/2col/image.png`;
+  const slug = familyName.toLowerCase();
+  const primarySeason = MISSING_2025_HEADSHOTS.has(slug) ? '2024' : '2025';
+  return buildF1HeadshotUrl(primarySeason, slug);
 };
 
 export const getTeamLogoUrl = (team, width = 48) => {
