@@ -13,6 +13,63 @@ const ERGAST_BASE_URL = 'https://api.jolpi.ca/ergast/f1';
 // Cache for API responses
 const cache = new Map();
 
+const MIN_REQUEST_INTERVAL = 250; // ms between calls to avoid bursts
+const MAX_RETRY_ATTEMPTS = 3;
+const BASE_RETRY_DELAY = 1000; // ms
+let lastRequestTimestamp = 0;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function enforceRateLimit() {
+  const now = Date.now();
+  const elapsed = now - lastRequestTimestamp;
+  if (elapsed < MIN_REQUEST_INTERVAL) {
+    await sleep(MIN_REQUEST_INTERVAL - elapsed);
+  }
+  lastRequestTimestamp = Date.now();
+}
+
+async function fetchWithRateLimit(url, options, attempt = 0) {
+  await enforceRateLimit();
+
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (error) {
+    if (attempt < MAX_RETRY_ATTEMPTS) {
+      await sleep(BASE_RETRY_DELAY * Math.pow(2, attempt));
+      return fetchWithRateLimit(url, options, attempt + 1);
+    }
+    throw error;
+  }
+
+  if (response.status === 429) {
+    if (attempt >= MAX_RETRY_ATTEMPTS) {
+      const error = new Error('API rate limit exceeded (429)');
+      error.status = 429;
+      throw error;
+    }
+
+    const retryAfterHeader = response.headers.get('Retry-After');
+    const retryDelay = retryAfterHeader ? parseFloat(retryAfterHeader) * 1000 : BASE_RETRY_DELAY * Math.pow(2, attempt);
+    await sleep(Number.isFinite(retryDelay) ? retryDelay : BASE_RETRY_DELAY);
+    return fetchWithRateLimit(url, options, attempt + 1);
+  }
+
+  if (!response.ok) {
+    if ((response.status === 503 || response.status === 504) && attempt < MAX_RETRY_ATTEMPTS) {
+      await sleep(BASE_RETRY_DELAY * Math.pow(2, attempt));
+      return fetchWithRateLimit(url, options, attempt + 1);
+    }
+
+    const error = new Error(`API Error: ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  return response;
+}
+
 // Helper to fetch with caching
 async function fetchWithCache(url, cacheKey, cacheDuration = 3600000) {
   const cached = cache.get(cacheKey);
@@ -20,10 +77,7 @@ async function fetchWithCache(url, cacheKey, cacheDuration = 3600000) {
     return cached.data;
   }
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
-  }
+  const response = await fetchWithRateLimit(url);
 
   const data = await response.json();
   cache.set(cacheKey, { data, timestamp: Date.now() });
