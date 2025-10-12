@@ -267,37 +267,35 @@ const useScheduleWithResults = () => {
             try {
                 const races = await ErgastAPI.getCurrentSchedule();
 
-                // For each race, check if it has results or get previous year's
-                const racesWithData = await Promise.all(
-                    races.map(async (race) => {
-                        const now = new Date();
-                        const raceDate = new Date(race.date + 'T' + race.time);
-                        const isPast = raceDate < now;
+                const racesWithData = [];
 
-                        let results = null;
+                for (const race of races) {
+                    const now = new Date();
+                    const raceDate = new Date(race.date + 'T' + race.time);
+                    const isPast = raceDate < now;
 
-                        if (isPast) {
-                            try {
-                                const raceResults = await ErgastAPI.getRaceResults(race.season, race.round);
-                                results = raceResults?.Results || null;
-                            } catch (err) {
-                                console.log(`No current results for ${race.raceName}`);
-                            }
+                    let results = null;
+
+                    if (isPast) {
+                        try {
+                            const raceResults = await ErgastAPI.getRaceResults(race.season, race.round);
+                            results = raceResults?.Results || null;
+                        } catch (err) {
+                            console.log(`No current results for ${race.raceName}`);
                         }
+                    }
 
-                        // If no current results, try to get previous year's race at this circuit
-                        if (!results) {
-                            try {
-                                const prevRace = await ErgastAPI.getPreviousYearRace(race.Circuit.circuitId, parseInt(race.season));
-                                results = prevRace?.Results || null;
-                            } catch (err) {
-                                console.log(`No previous year results for ${race.raceName}`);
-                            }
+                    if (!results) {
+                        try {
+                            const prevRace = await ErgastAPI.getPreviousYearRace(race.Circuit.circuitId, parseInt(race.season, 10));
+                            results = prevRace?.Results || null;
+                        } catch (err) {
+                            console.log(`No previous year results for ${race.raceName}`);
                         }
+                    }
 
-                        return { ...race, results, isPast };
-                    })
-                );
+                    racesWithData.push({ ...race, results, isPast });
+                }
 
                 setSchedule(racesWithData);
                 setLoading(false);
@@ -2623,7 +2621,6 @@ export default function App() {
         </div>
     );
 }
-
 
 
 

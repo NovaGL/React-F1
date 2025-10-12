@@ -13,7 +13,7 @@ const ERGAST_BASE_URL = 'https://api.jolpi.ca/ergast/f1';
 // Cache for API responses
 const cache = new Map();
 
-const MIN_REQUEST_INTERVAL = 250; // ms between calls to avoid bursts
+const MIN_REQUEST_INTERVAL = 750; // ms between calls to avoid bursts
 const MAX_RETRY_ATTEMPTS = 3;
 const BASE_RETRY_DELAY = 1000; // ms
 let lastRequestTimestamp = 0;
