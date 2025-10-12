@@ -141,7 +141,29 @@ const SeasonAnalysis = () => {
     }, []);
 
     if (loading) {
-        return <div className="text-center p-8 text-gray-300">Loading season analysis...</div>;
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900">
+                <div className="relative">
+                    {/* Outer spinning ring */}
+                    <div className="w-24 h-24 border-4 border-gray-700 border-t-red-600 rounded-full animate-spin"></div>
+                    
+                    {/* Inner spinning ring */}
+                    <div className="absolute top-3 left-3 w-18 h-18 border-4 border-gray-700 border-b-red-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+                </div>
+                
+                <div className="mt-8 text-center">
+                    <h2 className="text-2xl font-bold text-white mb-2">Loading Season Analysis</h2>
+                    <p className="text-gray-400">Fetching championship data, statistics, and performance trends...</p>
+                    
+                    {/* Loading dots animation */}
+                    <div className="flex justify-center items-center space-x-2 mt-4">
+                        <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (

@@ -24,9 +24,8 @@ export const TEAM_COLORS = {
 };
 
 export const TEAM_LOGOS = {
-  red_bull: '/img/red-bull.svg',
-  rb: 'https://www.f1manager.com/_nuxt/img/rb.bbcc36f.svg',
-  racing_bulls: 'https://www.f1manager.com/_nuxt/img/rb.bbcc36f.svg',
+  red_bull: '/red-bull.svg',
+  // rb and racing_bulls will use Cloudinary (handled in getTeamLogoUrl)
   ferrari: 'https://www.f1manager.com/_nuxt/img/ferrari.a3fea9f.svg',
   haas: 'https://www.f1manager.com/_nuxt/img/haas.210c7ac.svg',
   mercedes: 'https://cdn.brandfetch.io/idsWGwlSmy/theme/light/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1728451883920',
@@ -323,20 +322,25 @@ export const getTeamLogoUrl = (team, width = 48) => {
   const teamId = normalizeTeamId(team);
   if (!teamId) return null;
 
-  // Check if we have a local logo first (prioritize local files)
-  if (TEAM_LOGOS[teamId]) {
-    return TEAM_LOGOS[teamId];
+  // Red Bull uses local logo, Racing Bulls uses Cloudinary
+  if (teamId === 'red_bull') {
+    return TEAM_LOGOS[teamId] || null;
   }
 
-  // Fallback to Cloudinary teams with white logos for better visibility on colored backgrounds
+  // Racing Bulls (rb, racing_bulls) uses Cloudinary
   const cloudinaryTeams = {
-    'rb': 'rb',
-    'racing_bulls': 'rb'
+    'rb': 'racingbulls',
+    'racing_bulls': 'racingbulls'
   };
 
   const cloudinaryTeam = cloudinaryTeams[teamId];
   if (cloudinaryTeam) {
     return `https://media.formula1.com/image/upload/c_lfill,w_${width}/q_auto/v1740000000/common/f1/2025/${cloudinaryTeam}/2025${cloudinaryTeam}logowhite.webp`;
+  }
+
+  // Check other local logos
+  if (TEAM_LOGOS[teamId]) {
+    return TEAM_LOGOS[teamId];
   }
 
   return null;
