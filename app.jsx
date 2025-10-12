@@ -12,6 +12,7 @@ import {
 import { getCircuitData, getCircuitImageUrl } from './circuit-data';
 import { getNationalityFlag, normalizeNationality } from './nationality-flags';
 import { Line, Bar } from 'react-chartjs-2';
+import { LAP_TIME_DRIVER_LIMIT } from './config';
 
 // Reusable driver image error handler to prevent infinite reload loops
 const handleDriverImageError = (e, driver, teamColor) => {
@@ -934,6 +935,13 @@ const DriverStandingsCard = ({ standings, loading }) => {
                                                 </>
                                             )}
                                         </div>
+
+                                        {/* Performance Charts */}
+                                        <DriverIndividualCharts
+                                            driver={standing.Driver}
+                                            currentYear={selectedYear}
+                                            teamColor={teamColor}
+                                        />
                                     </div>
                                 </div>
                             )}
@@ -1800,7 +1808,14 @@ const LapTimeChart = ({ race }) => {
             if (!race.isPast || !race.results) return;
 
             setLoading(true);
-            const driversToFetch = race.results.slice(0, 20);
+            const limit = Math.max(
+                1,
+                Math.min(
+                    typeof LAP_TIME_DRIVER_LIMIT === 'number' ? LAP_TIME_DRIVER_LIMIT : 10,
+                    race.results.length
+                )
+            );
+            const driversToFetch = race.results.slice(0, limit);
             setLoadingProgress({ current: 0, total: driversToFetch.length });
 
             try {
@@ -1832,8 +1847,9 @@ const LapTimeChart = ({ race }) => {
 
                 setLapData(driverLaps);
                 setAllDrivers(driverLaps.map(d => d.driver.driverId));
-                // Auto-select top 5 drivers
-                setSelectedDrivers(driverLaps.slice(0, 5).map(d => d.driver.driverId));
+                // Auto-select top drivers (capped at 5 for readability)
+                const autoSelectCount = Math.min(5, driverLaps.length);
+                setSelectedDrivers(driverLaps.slice(0, autoSelectCount).map(d => d.driver.driverId));
             } catch (err) {
                 console.error('Error fetching lap times:', err);
             } finally {
@@ -2498,7 +2514,22 @@ const RaceCalendarEnhanced = ({ schedule, loading }) => {
         setCircuitModal({ isOpen: false, race: null });
     };
 
-    if (loading) return <div className="text-center p-8 text-gray-300">Loading calendar...</div>;
+    if (loading) {
+        return (
+            <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
+                <div className="p-10 flex flex-col items-center justify-center text-gray-300">
+                    <div className="relative w-16 h-16 mb-4">
+                        <div className="absolute inset-0 border-4 border-gray-700 rounded-full"></div>
+                        <div className="absolute inset-0 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <div className="text-lg font-semibold text-white">Loading race calendar…</div>
+                    <p className="text-sm text-gray-400 mt-2 text-center max-w-xs">
+                        Fetching the latest schedule and results from the Ergast API.
+                    </p>
+                </div>
+            </div>
+        );
+    }
     if (schedule.length === 0) return <div className="text-center p-8 text-gray-400">No races available</div>;
 
     return (
@@ -2711,4 +2742,3 @@ export default function App() {
         </div>
     );
 }
-
