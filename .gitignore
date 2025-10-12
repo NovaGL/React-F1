@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+.env.local
+
+# Editor directories
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary or unused files
+.claude/
+app_components.txt
+FINAL-SUMMARY.md
+IMPLEMENTATION-GUIDE.md
+UPDATE-SUMMARY.md
+WHATS-NEW.md
+
+# AI assistant artifacts
+*-SUMMARY*.md
+*.analysis.md
+*.notes.txt

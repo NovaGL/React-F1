@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,300;0,400;0,700;1,600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face { 
+    font-family: 'F1';
+    src: url('https://www.formula1.com/etc/designs/fom-website/fonts/F1Regular/Formula1-Regular.woff2') format("woff2");
+}
+
+/* F1 font for STATS text */
+.f1-stats {
+  font-family: 'F1', Arial, sans-serif !important;
+  letter-spacing: 0.6px !important;
+  display: inline-block;
+}
+
+/* Titillium font for all headings */
+h1, h2 {
+  font-family: 'Titillium Web', "Helvetica Neue", Arial, sans-serif !important;
+}
