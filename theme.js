@@ -24,7 +24,7 @@ export const TEAM_COLORS = {
 };
 
 export const TEAM_LOGOS = {
-  red_bull: 'https://www.f1manager.com/_nuxt/img/redbull.1c78ea1.svg',
+  red_bull: '/img/red-bull.svg',
   rb: 'https://www.f1manager.com/_nuxt/img/rb.bbcc36f.svg',
   racing_bulls: 'https://www.f1manager.com/_nuxt/img/rb.bbcc36f.svg',
   ferrari: 'https://www.f1manager.com/_nuxt/img/ferrari.a3fea9f.svg',
@@ -38,9 +38,9 @@ export const TEAM_LOGOS = {
     'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MC4xNCA0My44NSI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogI2ZmZjsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNDIuNzksMTguODVMNDkuOCwwaDEwLjM0bC0xMS41NiwzMS4xMi01Ljc4LTEyLjI2aDBabS0yNS40NS0uMDFMMTAuMzQsMEgwTDExLjU2LDMxLjEybDUuNzgtMTIuMjZoMFpNMzAuOTgsMGgtMS44MkwxMi44NywzNC42MWwzLjQzLDkuMjRoMS42MWwxMi4xNS0yNS43OCwxMi4xNSwyNS43OGgxLjYxbDMuNDMtOS4yNEwzMC45OCwwWiIvPgo8L3N2Zz4=',
   aston_martin: 'https://cdn.brandfetch.io/ido6hOFCnF/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX&t=1668081343694',
   mclaren:
-    'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1NC45OSAzMC4xNyI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogI2ZmODAwMDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNDYuMjIsMGMtNS45LDAtMTQuMjEsMS43Ni0yMy4yMiw1LjA2QzE0Ljk0LDcuOTksNy4yMywxMS43OSwwLDE2LjM5YzYuOTQtMi41NSwxNC4yNS0zLjkyLDIxLjY0LTQuMDUsMTAuMzQsMCwxNy43LDQsNi44MywxNy44M0M2MC40Nyw5LjE3LDU5LjY0LC4wNSw0Ni4yMiwuMDUiLz4KPC9zdmc+',
-  alfa_romeo: 'https://www.f1manager.com/_nuxt/img/alfaromeo.210c7ac.svg',
-  alphatauri: 'https://www.f1manager.com/_nuxt/img/alphatauri.50d5226.svg',
+    'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1NC45OSAzMC4xNyI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogI2ZmZmZmZjsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNDYuMjIsMGMtNS45LDAtMTQuMjEsMS43Ni0yMy4yMiw1LjA2QzE0Ljk0LDcuOTksNy4yMywxMS43OSwwLDE2LjM5YzYuOTQtMi41NSwxNC4yNS0zLjkyLDIxLjY0LTQuMDUsMTAuMzQsMCwxNy43LDQsNi44MywxNy44M0M2MC40Nyw5LjE3LDU5LjY0LC4wNSw0Ni4yMiwuMDUiLz4KPC9zdmc+',
+  alfa_romeo: 'https://media.formula1.com/image/upload/f_auto,c_limit,q_auto,w_1320/content/dam/fom-website/2018-redesign-assets/team%20logos/alfa%20romeo',
+  alphatauri: 'https://media.formula1.com/image/upload/f_auto,c_limit,q_auto,w_1320/content/dam/fom-website/2018-redesign-assets/team%20logos/alphatauri',
   renault: 'https://cdn.brandfetch.io/id9Ki3CXMR/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX&t=1728592494660',
   toro_rosso: 'https://cdn.brandfetch.io/idN4wVWWBt/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX&t=1728592526608'
 };
@@ -48,8 +48,7 @@ export const TEAM_LOGOS = {
 const CLOUDINARY_LOGO_MAP = {
   rb: 'rb',
   racing_bulls: 'rb',
-  red_bull: 'redbullracing',
-  mclaren: 'mclaren'
+  red_bull: 'redbullracing'  
 };
 
 const TEAM_ALIAS = {};
@@ -110,9 +109,9 @@ registerAliases('kick_sauber', [
   'kick sauber f1 team'
 ]);
 registerAliases('sauber', ['sauber f1 team', 'sauber formula 1 team', 'sauber']);
-registerAliases('alphatauri', ['alpha tauri', 'alpha-tauri', 'scuderia alphatauri', 'alphatauri']);
+registerAliases('alphatauri', ['alpha tauri', 'alpha-tauri', 'scuderia alphatauri', 'alphatauri', 'alphatauri honda']);
 registerAliases('toro_rosso', ['toro rosso', 'scuderia toro rosso', 'tororosso']);
-registerAliases('alfa_romeo', ['alfa romeo', 'alfa-romeo', 'alfaromeo']);
+registerAliases('alfa_romeo', ['alfa romeo', 'alfa-romeo', 'alfaromeo', 'alfa romeo racing', 'alfa']);
 
 export const sanitizeTeamKey = (value) => {
   if (!value) return '';
@@ -148,6 +147,10 @@ export const normalizeTeamId = (team) => {
   if (!raw) return null;
 
   const lowered = raw.toLowerCase();
+
+  // Special case: Ergast API returns 'alfa' for Alfa Romeo
+  if (lowered === 'alfa') return 'alfa_romeo';
+
   if (TEAM_COLORS[lowered]) return lowered;
   if (TEAM_ALIAS[lowered]) return TEAM_ALIAS[lowered];
 
@@ -258,39 +261,61 @@ export const getDriverCloudinaryUrl = (driverCode, width = 720) => {
   return `https://media.formula1.com/image/upload/c_fill,w_${width}/q_auto/v1740000000/common/f1/2025/${team}/${code}01/2025${team}${code}01right.webp`;
 };
 
-const MISSING_2025_HEADSHOTS = new Set([
-  'colapinto'
-]);
+// Drivers who don't have 2025 headshots - map to their last active season
+const DRIVER_LAST_SEASON = {
+  'colapinto': '2024',
+  'perez': '2024',      // Sergio Pérez (left Red Bull after 2024)
+  'bottas': '2024',     // Valtteri Bottas (left Sauber after 2024)
+  'ricciardo': '2024',  // Daniel Ricciardo (left RB after 2024)
+  'zhou': '2024',       // Zhou Guanyu (left Sauber after 2024)
+  'magnussen': '2024',  // Kevin Magnussen (left Haas after 2024)
+  'sargeant': '2024',   // Logan Sargeant (left Williams during 2024)
+  'devries': '2023',    // Nyck de Vries (left AlphaTauri in 2023)
+  'schumacher': '2022', // Mick Schumacher (left Haas after 2022)
+  'vettel': '2022',     // Sebastian Vettel (retired after 2022)
+  'latifi': '2022'      // Nicholas Latifi (left Williams after 2022)
+};
 
 const buildF1HeadshotUrl = (season, slug) =>
   `https://www.formula1.com/content/dam/fom-website/drivers/${season}Drivers/${slug}.png.transform/2col/image.png`;
+
+// Normalize driver names for URL slugs
+const normalizeDriverSlug = (name) => {
+  if (!name) return null;
+
+  return name
+    .toLowerCase()
+    .normalize('NFD')  // Normalize Unicode characters (é -> e)
+    .replace(/[\u0300-\u036f]/g, '')  // Remove diacritics
+    .replace(/\s+/g, '')  // Remove all spaces (de vries -> devries)
+    .replace(/[^a-z0-9]/g, '');  // Remove any other non-alphanumeric chars
+};
 
 export const getDriverHeadshotUrl = (driver, options = {}) => {
   const { width = 720 } = options;
 
   if (!driver) return null;
 
+  let lastName;
+
   // Handle string input (driver name)
   if (typeof driver === 'string') {
-    const lastName = driver.split(' ').pop();
-    if (!lastName) return null;
-    const slug = lastName.toLowerCase();
-    const primarySeason = MISSING_2025_HEADSHOTS.has(slug) ? '2024' : '2025';
-    return buildF1HeadshotUrl(primarySeason, slug);
+    lastName = driver.split(' ').pop();
+  } else {
+    // Extract family name from driver object
+    lastName =
+      driver.familyName ||
+      driver.lastName ||
+      driver.Driver?.familyName ||
+      driver.driver?.familyName ||
+      driver.name?.split(' ').pop();
   }
 
-  // Extract family name for fallback
-  const familyName =
-    driver.familyName ||
-    driver.lastName ||
-    driver.Driver?.familyName ||
-    driver.driver?.familyName ||
-    driver.name?.split(' ').pop();
+  if (!lastName) return null;
 
-  if (!familyName) return null;
-
-  const slug = familyName.toLowerCase();
-  const primarySeason = MISSING_2025_HEADSHOTS.has(slug) ? '2024' : '2025';
+  const slug = normalizeDriverSlug(lastName);
+  // Use the driver's last active season, or default to 2025 for current drivers
+  const primarySeason = DRIVER_LAST_SEASON[slug] || '2025';
   return buildF1HeadshotUrl(primarySeason, slug);
 };
 
@@ -298,12 +323,15 @@ export const getTeamLogoUrl = (team, width = 48) => {
   const teamId = normalizeTeamId(team);
   if (!teamId) return null;
 
-  // Cloudinary teams with white logos for better visibility on colored backgrounds
+  // Check if we have a local logo first (prioritize local files)
+  if (TEAM_LOGOS[teamId]) {
+    return TEAM_LOGOS[teamId];
+  }
+
+  // Fallback to Cloudinary teams with white logos for better visibility on colored backgrounds
   const cloudinaryTeams = {
     'rb': 'rb',
-    'racing_bulls': 'rb',
-    'red_bull': 'redbullracing',
-    'mclaren': 'mclaren'
+    'racing_bulls': 'rb'
   };
 
   const cloudinaryTeam = cloudinaryTeams[teamId];
@@ -311,5 +339,5 @@ export const getTeamLogoUrl = (team, width = 48) => {
     return `https://media.formula1.com/image/upload/c_lfill,w_${width}/q_auto/v1740000000/common/f1/2025/${cloudinaryTeam}/2025${cloudinaryTeam}logowhite.webp`;
   }
 
-  return TEAM_LOGOS[teamId] || null;
+  return null;
 };

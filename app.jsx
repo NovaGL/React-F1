@@ -12,6 +12,27 @@ import {
 import { getCircuitData, getCircuitImageUrl } from './circuit-data';
 import { getNationalityFlag, normalizeNationality } from './nationality-flags';
 import { Line, Bar } from 'react-chartjs-2';
+
+// Reusable driver image error handler to prevent infinite reload loops
+const handleDriverImageError = (e, driver, teamColor) => {
+    const attempt = parseInt(e.target.getAttribute('data-fallback-attempt') || '0');
+    const familyName = driver.familyName.toLowerCase();
+
+    if (attempt === 0) {
+        // First fallback: Try 2024 driver image
+        e.target.setAttribute('data-fallback-attempt', '1');
+        e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
+    } else if (attempt === 1) {
+        // Second fallback: Try generic F1 fallback
+        e.target.setAttribute('data-fallback-attempt', '2');
+        e.target.src = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
+    } else {
+        // Final fallback: Show driver code or initials with team color
+        e.target.style.display = 'none';
+        const driverCode = driver.code || driver.familyName.slice(0, 3).toUpperCase();
+        e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-lg" style="background-color: ${teamColor}">${driverCode}</div>`;
+    }
+};
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -415,20 +436,7 @@ const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, las
                                             src={getDriverHeadshotUrl(driverStandings[0].Driver)}
                                             alt={driverStandings[0].Driver.familyName}
                                             className="w-full h-full object-contain"
-                                            onError={(e) => {
-                                                const familyName = driverStandings[0].Driver.familyName.toLowerCase();
-                                                const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-                                                const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                                
-                                                if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                                    e.target.src = fallback2024Url;
-                                                } else if (e.target.src === fallback2024Url) {
-                                                    e.target.src = fallbackGenericUrl;
-                                                } else {
-                                                    e.target.style.display = 'none';
-                                                    e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-lg" style="background-color: ${getTeamColor(driverStandings[0].Constructors[0]?.constructorId)}">${driverStandings[0].Driver.code || driverStandings[0].Driver.familyName.slice(0, 3).toUpperCase()}</div>`;
-                                                }
-                                            }}
+                                            onError={(e) => handleDriverImageError(e, driverStandings[0].Driver, getTeamColor(driverStandings[0].Constructors[0]?.constructorId))}
                                         />
                                     </div>
                                     <div className="flex-1">
@@ -597,20 +605,7 @@ const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, las
                                                 src={getDriverHeadshotUrl(standing.Driver)}
                                                 alt={standing.Driver.familyName}
                                                 className="w-full h-full object-contain"
-                                                onError={(e) => {
-                                                    const familyName = standing.Driver.familyName.toLowerCase();
-                                                    const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-                                                    const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                                    
-                                                    if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                                        e.target.src = fallback2024Url;
-                                                    } else if (e.target.src === fallback2024Url) {
-                                                        e.target.src = fallbackGenericUrl;
-                                                    } else {
-                                                        e.target.style.display = 'none';
-                                                        e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${standing.Driver.code || standing.Driver.familyName.slice(0, 3).toUpperCase()}</div>`;
-                                                    }
-                                                }}
+                                                onError={(e) => handleDriverImageError(e, standing.Driver, getTeamColor(standing.Constructors[0]?.constructorId))}
                                             />
                                         </div>
                                         <div className="flex-1">
@@ -847,20 +842,7 @@ const DriverStandingsCard = ({ standings, loading }) => {
                                             src={getDriverHeadshotUrl(standing.Driver)}
                                             alt={standing.Driver.familyName}
                                             className="w-full h-full object-contain"
-                                            onError={(e) => {
-                                                const familyName = standing.Driver.familyName.toLowerCase();
-                                                const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-                                                const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                                
-                                                if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                                    e.target.src = fallback2024Url;
-                                                } else if (e.target.src === fallback2024Url) {
-                                                    e.target.src = fallbackGenericUrl;
-                                                } else {
-                                                    e.target.style.display = 'none';
-                                                    e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-lg" style="background-color: ${teamColor}">${standing.Driver.code || standing.Driver.familyName.slice(0, 3).toUpperCase()}</div>`;
-                                                }
-                                            }}
+                                            onError={(e) => handleDriverImageError(e, standing.Driver, getTeamColor(standing.Constructors[0]?.constructorId))}
                                         />
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -1003,20 +985,7 @@ const DriverStandingsCard = ({ standings, loading }) => {
     src={getDriverHeadshotUrl(standing.Driver)}
     alt={standing.Driver.familyName}
     className="w-full h-full object-contain"
-    onError={(e) => {
-        const familyName = standing.Driver.familyName.toLowerCase();
-        const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-        const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-        
-        if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-            e.target.src = fallback2024Url;
-        } else if (e.target.src === fallback2024Url) {
-            e.target.src = fallbackGenericUrl;
-        } else {
-            e.target.style.display = 'none';
-            e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-lg" style="background-color: ${teamColor}">${standing.Driver.code || standing.Driver.familyName.slice(0, 3).toUpperCase()}</div>`;
-        }
-    }}
+    onError={(e) => handleDriverImageError(e, standing.Driver, getTeamColor(standing.Constructors[0]?.constructorId))}
 />
 
                                                 </div>
@@ -1079,7 +1048,7 @@ const DriverStandingsCard = ({ standings, loading }) => {
                                     {/* Expanded Driver Details */}
                                     {isExpanded && (
                                         <tr style={{ backgroundColor: `${teamColor}08` }}>
-                                            <td colSpan="7" className="px-6 py-6">
+                                            <td colSpan="7" className="px-2 py-2 sm:px-6 sm:py-6">
                                                 <div className="mb-6 flex flex-col md:flex-row gap-6 items-start ">
                                                     {/* Large Driver Photo */}
                                                     <div className="w-full md:w-48 flex-shrink-0">
@@ -1104,19 +1073,25 @@ const DriverStandingsCard = ({ standings, loading }) => {
     />
     
     {/* Driver Photo - fills frame (will scale to fit) */}
-    <img 
-        src={getDriverCloudinaryUrl(standing.Driver.code, 720) || `https://www.formula1.com/content/dam/fom-website/drivers/2025Drivers/${standing.Driver.familyName.toLowerCase()}.png.transform/2col/image.png`}
+    <img
+        src={getDriverCloudinaryUrl(standing.Driver.code, 720) || getDriverHeadshotUrl(standing.Driver)}
         alt={`${standing.Driver.givenName} ${standing.Driver.familyName}`}
         className="absolute inset-0 w-full h-full object-cover object-top z-5"
         onError={(e) => {
-            const familyName = standing.Driver.familyName.toLowerCase();
-            const currentSrc = e.target.src;
-            
-            if (currentSrc.includes('media.formula1.com')) {
-                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2025Drivers/${familyName}.png.transform/2col/image.png`;
-            } else if (currentSrc.includes('2025Drivers')) {
+            const attempt = parseInt(e.target.getAttribute('data-fallback-attempt') || '0');
+
+            if (attempt === 0) {
+                // Try 2024 as fallback
+                e.target.setAttribute('data-fallback-attempt', '1');
+                const familyName = standing.Driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
                 e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
+            } else if (attempt === 1) {
+                // Try 2023 as fallback (for older drivers like de Vries)
+                e.target.setAttribute('data-fallback-attempt', '2');
+                const familyName = standing.Driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2023Drivers/${familyName}.png.transform/2col/image.png`;
             } else {
+                // Hide if all fallbacks fail
                 e.target.style.display = 'none';
             }
         }}
@@ -1598,20 +1573,7 @@ const ConstructorDetails = ({ standing, teamColor }) => {
                                         src={getDriverHeadshotUrl(driver.Driver)}
                                         alt={driver.Driver.familyName}
                                         className="w-full h-full object-contain"
-                                        onError={(e) => {
-                                            const familyName = driver.Driver.familyName.toLowerCase();
-                                            const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-                                            const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                            
-                                            if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                                e.target.src = fallback2024Url;
-                                            } else if (e.target.src === fallback2024Url) {
-                                                e.target.src = fallbackGenericUrl;
-                                            } else {
-                                                e.target.style.display = 'none';
-                                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-lg" style="background-color: ${teamColor}">${driver.Driver.code || driver.Driver.familyName.slice(0, 3).toUpperCase()}</div>`;
-                                            }
-                                        }}
+                                        onError={(e) => handleDriverImageError(e, driver.Driver, teamColor)}
                                     />
                                 </div>
                                 <div className="flex-1">
@@ -1720,7 +1682,7 @@ const ConstructorStandingsCard = ({ standings, loading }) => {
                                     </tr>
                                     {isExpanded && (
                                         <tr>
-                                            <td colSpan="6" className="px-6 py-4" style={{ backgroundColor: `${teamColor}08` }}>
+                                            <td colSpan="6" className="px-2 py-2 sm:px-6 sm:py-4" style={{ backgroundColor: `${teamColor}08` }}>
                                                 <ConstructorDetails standing={standing} teamColor={teamColor} />
                                             </td>
                                         </tr>
@@ -1740,6 +1702,7 @@ const LapTimeChart = ({ race }) => {
     const [lapData, setLapData] = useState([]);
     const [selectedDrivers, setSelectedDrivers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
     const [allDrivers, setAllDrivers] = useState([]);
     const [searchInput, setSearchInput] = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
@@ -1747,31 +1710,42 @@ const LapTimeChart = ({ race }) => {
     useEffect(() => {
         const fetchLapTimes = async () => {
             if (!race.isPast || !race.results) return;
-            
+
             setLoading(true);
+            const driversToFetch = race.results.slice(0, 20);
+            setLoadingProgress({ current: 0, total: driversToFetch.length });
+
             try {
-                // Fetch lap times for all drivers in the race
-                const driverLaps = await Promise.all(
-                    race.results.slice(0, 20).map(async (result) => {
-                        try {
-                            const laps = await ErgastAPI.getLapTimes(race.season, race.round, result.Driver.driverId);
-                            return {
+                const driverLaps = [];
+
+                // Fetch lap times sequentially with delay to avoid rate limiting
+                for (let i = 0; i < driversToFetch.length; i++) {
+                    const result = driversToFetch[i];
+                    setLoadingProgress({ current: i + 1, total: driversToFetch.length });
+
+                    try {
+                        const laps = await ErgastAPI.getLapTimes(race.season, race.round, result.Driver.driverId);
+                        if (laps && laps.length > 0) {
+                            driverLaps.push({
                                 driver: result.Driver,
                                 constructor: result.Constructor,
-                                laps: laps || []
-                            };
-                        } catch (err) {
-                            console.warn(`No lap data for ${result.Driver.familyName}`);
-                            return null;
+                                laps: laps
+                            });
                         }
-                    })
-                );
+                    } catch (err) {
+                        console.warn(`No lap data for ${result.Driver.familyName}`);
+                    }
 
-                const validData = driverLaps.filter(d => d && d.laps && d.laps.length > 0);
-                setLapData(validData);
-                setAllDrivers(validData.map(d => d.driver.driverId));
+                    // Add delay between requests to avoid rate limiting (200ms)
+                    if (i < driversToFetch.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                }
+
+                setLapData(driverLaps);
+                setAllDrivers(driverLaps.map(d => d.driver.driverId));
                 // Auto-select top 5 drivers
-                setSelectedDrivers(validData.slice(0, 5).map(d => d.driver.driverId));
+                setSelectedDrivers(driverLaps.slice(0, 5).map(d => d.driver.driverId));
             } catch (err) {
                 console.error('Error fetching lap times:', err);
             } finally {
@@ -1799,7 +1773,28 @@ const LapTimeChart = ({ race }) => {
     };
 
     if (loading) {
-        return <div className="text-gray-400 text-center py-4">Loading lap time data...</div>;
+        return (
+            <div className="text-gray-400 text-center py-8">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="relative w-16 h-16">
+                        <div className="absolute inset-0 border-4 border-gray-700 rounded-full"></div>
+                        <div className="absolute inset-0 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <div>
+                        <div className="text-white font-semibold mb-1">Loading lap time data...</div>
+                        <div className="text-sm text-gray-500">
+                            {loadingProgress.current} of {loadingProgress.total} drivers
+                        </div>
+                        <div className="w-64 h-2 bg-gray-700 rounded-full mt-2 overflow-hidden">
+                            <div
+                                className="h-full bg-red-500 transition-all duration-300"
+                                style={{ width: `${(loadingProgress.current / loadingProgress.total) * 100}%` }}
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     if (lapData.length === 0) {
@@ -1952,20 +1947,7 @@ const LapTimeChart = ({ race }) => {
                                             src={getDriverHeadshotUrl(`${driverData.driver.givenName} ${driverData.driver.familyName}`)}
                                             alt={driverData.driver.familyName}
                                             className="w-full h-full object-cover object-top"
-                                            onError={(e) => {
-                                                const familyName = driverData.driver.familyName.toLowerCase();
-                                                const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-                                                const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                                
-                                                if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                                    e.target.src = fallback2024Url;
-                                                } else if (e.target.src === fallback2024Url) {
-                                                    e.target.src = fallbackGenericUrl;
-                                                } else {
-                                                    e.target.style.display = 'none';
-                                                    e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${driverData.driver.code || driverData.driver.familyName.slice(0, 3).toUpperCase()}</div>`;
-                                                }
-                                            }}
+                                            onError={(e) => handleDriverImageError(e, driverData.driver, getTeamColor(driverData.constructor.constructorId))}
                                         />
                                     </div>
                                     <span className="text-sm font-medium text-white">
@@ -2018,20 +2000,7 @@ const LapTimeChart = ({ race }) => {
                                             src={getDriverHeadshotUrl(`${driverData.driver.givenName} ${driverData.driver.familyName}`)}
                                             alt={driverData.driver.familyName}
                                             className="w-full h-full object-cover object-top"
-                                            onError={(e) => {
-                                                const familyName = driverData.driver.familyName.toLowerCase();
-                                                const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-                                                const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                                
-                                                if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                                    e.target.src = fallback2024Url;
-                                                } else if (e.target.src === fallback2024Url) {
-                                                    e.target.src = fallbackGenericUrl;
-                                                } else {
-                                                    e.target.style.display = 'none';
-                                                    e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${driverData.driver.code || driverData.driver.familyName.slice(0, 3).toUpperCase()}</div>`;
-                                                }
-                                            }}
+                                            onError={(e) => handleDriverImageError(e, driverData.driver, getTeamColor(driverData.constructor.constructorId))}
                                         />
                                     </div>
                                     <div className="flex-1">
@@ -2219,20 +2188,7 @@ const RaceCard = ({ race, isExpanded, onToggle, onImageClick }) => {
                                                 src={getDriverHeadshotUrl(result.Driver)}
                                                 alt={result.Driver.familyName}
                                                 className="w-full h-full object-contain"
-                                                onError={(e) => {
-                                                    const familyName = result.Driver.familyName.toLowerCase();
-                                                    const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-                                                    const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                                    
-                                                    if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                                        e.target.src = fallback2024Url;
-                                                    } else if (e.target.src === fallback2024Url) {
-                                                        e.target.src = fallbackGenericUrl;
-                                                    } else {
-                                                        e.target.style.display = 'none';
-                                                        e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${result.Driver.code}</div>`;
-                                                    }
-                                                }}
+                                                onError={(e) => handleDriverImageError(e, result.Driver, getTeamColor(result.Constructor.constructorId))}
                                             />
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -2311,20 +2267,7 @@ const RaceCard = ({ race, isExpanded, onToggle, onImageClick }) => {
                                 src={getDriverHeadshotUrl(result.Driver)}
                                 alt={result.Driver.familyName}
                                 className="w-full h-full object-contain"
-                                onError={(e) => {
-                                    const familyName = result.Driver.familyName.toLowerCase();
-                                    const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-                                    const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                    
-                                    if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                        e.target.src = fallback2024Url;
-                                    } else if (e.target.src === fallback2024Url) {
-                                        e.target.src = fallbackGenericUrl;
-                                    } else {
-                                        e.target.style.display = 'none';
-                                        e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${result.Driver.code}</div>`;
-                                    }
-                                }}
+                                onError={(e) => handleDriverImageError(e, result.Driver, getTeamColor(result.Constructor.constructorId))}
                             />
                         </div>
                         <div className="flex-1">
@@ -2353,7 +2296,7 @@ const RaceCard = ({ race, isExpanded, onToggle, onImageClick }) => {
                         {false && race.isPast && fastestLaps.length > 0 && (
                             <div className="mt-6">
                                 <h4 className="text-md font-semibold text-white mb-3 flex items-center gap-2">
-                                    <span>â±ï¸</span> Fastest Lap Times
+                                    <span>⏱️</span> Fastest Lap Times
                                 </h4>
                                 <div className="space-y-2">
                                     {fastestLaps
@@ -2379,20 +2322,7 @@ const RaceCard = ({ race, isExpanded, onToggle, onImageClick }) => {
                                                             src={getDriverHeadshotUrl(lapData.driver)}
                                                             alt={lapData.driver.familyName}
                                                             className="w-full h-full object-contain"
-                                                            onError={(e) => {
-                                                                const familyName = lapData.driver.familyName.toLowerCase();
-                                                                const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-                                                                const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                                                
-                                                                if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                                                    e.target.src = fallback2024Url;
-                                                                } else if (e.target.src === fallback2024Url) {
-                                                                    e.target.src = fallbackGenericUrl;
-                                                                } else {
-                                                                    e.target.style.display = 'none';
-                                                                    e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${lapData.driver.code || lapData.driver.familyName.slice(0, 3).toUpperCase()}</div>`;
-                                                                }
-                                                            }}
+                                                            onError={(e) => handleDriverImageError(e, lapData.driver, getTeamColor(lapData.constructor.constructorId))}
                                                         />
                                                     </div>
                                                     <div className="flex-1">
@@ -2605,8 +2535,8 @@ const RaceCalendarEnhanced = ({ schedule, loading }) => {
                                 {getCircuitData(circuitModal.race.Circuit.circuitId).description}
                             </p>
                             <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
-                                <span>ðŸ“ {circuitModal.race.Circuit.Location.locality}, {circuitModal.race.Circuit.Location.country}</span>
-                                <span>ðŸ“… {new Date(circuitModal.race.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                <span>📍 {circuitModal.race.Circuit.Location.locality}, {circuitModal.race.Circuit.Location.country}</span>
+                                <span>📅 {new Date(circuitModal.race.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                             </div>
                         </div>
                     </div>

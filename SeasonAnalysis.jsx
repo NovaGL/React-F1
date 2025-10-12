@@ -6,6 +6,27 @@ import * as Analytics from './analytics';
 import * as ErgastAPI from './ergast-api';
 import { getTeamColor, getTeamLogoUrl, getDriverHeadshotUrl } from './theme';
 import { Line, Bar, Radar } from 'react-chartjs-2';
+
+// Reusable driver image error handler to prevent infinite reload loops
+const handleDriverImageError = (e, driverName, teamColor) => {
+    const attempt = parseInt(e.target.getAttribute('data-fallback-attempt') || '0');
+    const lastName = driverName.split(' ').pop().toLowerCase();
+
+    if (attempt === 0) {
+        // First fallback: Try 2024 driver image
+        e.target.setAttribute('data-fallback-attempt', '1');
+        e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${lastName}.png.transform/2col/image.png`;
+    } else if (attempt === 1) {
+        // Second fallback: Try generic F1 fallback
+        e.target.setAttribute('data-fallback-attempt', '2');
+        e.target.src = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
+    } else {
+        // Final fallback: Show driver initials with team color
+        e.target.style.display = 'none';
+        const initials = driverName.split(' ').map(n => n[0]).join('');
+        e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${initials}</div>`;
+    }
+};
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -155,10 +176,7 @@ const SeasonAnalysis = () => {
                                                 src={getDriverHeadshotUrl(battle.leader.name)}
                                                 alt={battle.leader.name}
                                                 className="w-full h-full object-cover object-top"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                    e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-sm" style="background-color: ${leaderTeamColor}">${battle.leader.name.split(' ').map(n => n[0]).join('')}</div>`;
-                                                }}
+                                                onError={(e) => handleDriverImageError(e, battle.leader.name, leaderTeamColor)}
                                             />
                                         </div>
                                         <div className="flex-1">
@@ -206,10 +224,7 @@ const SeasonAnalysis = () => {
                                                             src={getDriverHeadshotUrl(driver.driver)}
                                                             alt={driver.driver}
                                                             className="w-full h-full object-cover object-top"
-                                                            onError={(e) => {
-                                                                e.target.style.display = 'none';
-                                                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${driver.driver.split(' ').map(n => n[0]).join('')}</div>`;
-                                                            }}
+                                                            onError={(e) => handleDriverImageError(e, driver.driver, teamColor)}
                                                         />
                                                     </div>
                                                     <div className="flex-1">
@@ -251,10 +266,7 @@ const SeasonAnalysis = () => {
                                                             src={getDriverHeadshotUrl(driver.driver)}
                                                             alt={driver.driver}
                                                             className="w-full h-full object-cover object-top"
-                                                            onError={(e) => {
-                                                                e.target.style.display = 'none';
-                                                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${driver.driver.split(' ').map(n => n[0]).join('')}</div>`;
-                                                            }}
+                                                            onError={(e) => handleDriverImageError(e, driver.driver, teamColor)}
                                                         />
                                                     </div>
                                                     <div className="flex-1">
@@ -637,10 +649,7 @@ const PointsProgressionChart = ({ battle, stats }) => {
                                             src={getDriverHeadshotUrl(driver.name)}
                                             alt={driver.name}
                                             className="w-full h-full object-cover object-top"
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${driver.name.split(' ').map(n => n[0]).join('')}</div>`;
-                                            }}
+                                            onError={(e) => handleDriverImageError(e, driver.name, teamColor)}
                                         />
                                     </div>
                                     <span className="text-sm font-medium text-white">{driver.name}</span>
@@ -691,10 +700,7 @@ const PointsProgressionChart = ({ battle, stats }) => {
                                             src={getDriverHeadshotUrl(driver.name)}
                                             alt={driver.name}
                                             className="w-full h-full object-cover object-top"
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${driver.name.split(' ').map(n => n[0]).join('')}</div>`;
-                                            }}
+                                            onError={(e) => handleDriverImageError(e, driver.name, teamColor)}
                                         />
                                     </div>
                                     <div className="flex-1">
@@ -866,10 +872,7 @@ const WinsYoYChart = () => {
                                             src={getDriverHeadshotUrl(driver.name)}
                                             alt={driver.name}
                                             className="w-full h-full object-cover object-top"
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${driver.name.split(' ').map(n => n[0]).join('')}</div>`;
-                                            }}
+                                            onError={(e) => handleDriverImageError(e, driver.name, teamColor)}
                                         />
                                     </div>
                                     <span className="text-sm font-medium text-white">{driver.name}</span>
@@ -921,10 +924,7 @@ const WinsYoYChart = () => {
                                             src={getDriverHeadshotUrl(driver.name)}
                                             alt={driver.name}
                                             className="w-full h-full object-cover object-top"
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${driver.name.split(' ').map(n => n[0]).join('')}</div>`;
-                                            }}
+                                            onError={(e) => handleDriverImageError(e, driver.name, teamColor)}
                                         />
                                     </div>
                                     <div className="flex-1">
@@ -985,10 +985,7 @@ const DriverPerformanceMatrix = ({ drivers }) => {
                                         src={headshotUrl}
                                         alt={driver.name}
                                         className="w-full h-full object-cover object-top"
-                                        onError={(e) => {
-                                            e.target.style.display = 'none';
-                                            e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-sm" style="background-color: ${teamColor}">${driver.name.split(' ').map(n => n[0]).join('')}</div>`;
-                                        }}
+                                        onError={(e) => handleDriverImageError(e, driver.name, teamColor)}
                                     />
                                 </div>
                             </div>
@@ -1592,20 +1589,7 @@ const DriverPerformanceTrendsTable = ({ trends }) => {
                                                 src={headshotUrl}
                                                 alt={driver.name}
                                                 className="w-full h-full object-cover object-top"
-                                                onError={(e) => {
-                                                    const lastName = driver.name.split(' ').pop().toLowerCase();
-                                                    const fallback2024Url = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${lastName}.png.transform/2col/image.png`;
-                                                    const fallbackGenericUrl = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
-                                                    
-                                                    if (e.target.src !== fallback2024Url && e.target.src !== fallbackGenericUrl) {
-                                                        e.target.src = fallback2024Url;
-                                                    } else if (e.target.src === fallback2024Url) {
-                                                        e.target.src = fallbackGenericUrl;
-                                                    } else {
-                                                        e.target.style.display = 'none';
-                                                        e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center font-bold text-white text-xs" style="background-color: ${teamColor}">${driver.name.split(' ').map(n => n[0]).join('')}</div>`;
-                                                    }
-                                                }}
+                                                onError={(e) => handleDriverImageError(e, driver.name, teamColor)}
                                             />
                                         </div>
                                         <div>
