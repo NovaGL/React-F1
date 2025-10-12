@@ -1478,7 +1478,7 @@ const DriverPerformanceTrendsTable = ({ trends }) => {
 
     const sortedDrivers = useMemo(() => {
         // First, assign championship positions based on points (1-based)
-        const driversWithPositions = trends.drivers
+        const driversWithPositions = [...trends.drivers]
             .sort((a, b) => b.totalPoints - a.totalPoints)
             .map((driver, index) => ({
                 ...driver,
@@ -1527,8 +1527,87 @@ const DriverPerformanceTrendsTable = ({ trends }) => {
     };
 
     return (
-        <div className="overflow-x-auto">
-            <table className="w-full">
+        <div className="space-y-4">
+            <div className="md:hidden space-y-3">
+                {sortedDrivers.map((driver) => {
+                    const teamColor = resolveTeamColor(driver);
+                    const headshotUrl = getDriverHeadshotUrl(driver.name);
+                    const teamLogoUrl = getTeamLogoUrl(driver.teamId || driver.team);
+
+                    return (
+                        <div
+                            key={`${driver.driverId}-mobile-${driver.championshipPosition}`}
+                            className="rounded-lg border border-gray-700/50 bg-gray-900/40 p-4 transition-shadow hover:shadow-lg"
+                            style={{
+                                backgroundColor: `${teamColor}18`,
+                                borderLeft: `4px solid ${teamColor}`
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="text-2xl font-bold text-white w-9 text-center">
+                                    {driver.championshipPosition}
+                                </div>
+                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-900 flex-shrink-0">
+                                    <img
+                                        src={headshotUrl}
+                                        alt={driver.name}
+                                        className="w-full h-full object-cover object-top"
+                                        onError={(e) => handleDriverImageError(e, driver.name, teamColor)}
+                                    />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-bold text-white truncate">{driver.name}</div>
+                                    <div className="text-xs text-gray-400 truncate">{driver.team}</div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xl font-bold text-green-400">{driver.totalPoints}</div>
+                                    <div className="text-xs text-gray-400">points</div>
+                                </div>
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-gray-300">
+                                <div className="flex items-center justify-between bg-gray-900/40 px-3 py-2 rounded-lg">
+                                    <span className="uppercase tracking-wide text-gray-500">Avg Pos</span>
+                                    <span className="font-semibold text-white">{driver.avgPosition ?? '-'}</span>
+                                </div>
+                                <div className="flex items-center justify-between bg-gray-900/40 px-3 py-2 rounded-lg">
+                                    <span className="uppercase tracking-wide text-gray-500">Wins</span>
+                                    <span className="font-semibold text-yellow-400">{driver.wins ?? 0}</span>
+                                </div>
+                                <div className="flex items-center justify-between bg-gray-900/40 px-3 py-2 rounded-lg">
+                                    <span className="uppercase tracking-wide text-gray-500">Podiums</span>
+                                    <span className="font-semibold text-orange-400">{driver.podiums ?? 0}</span>
+                                </div>
+                                <div className="flex items-center justify-between bg-gray-900/40 px-3 py-2 rounded-lg">
+                                    <span className="uppercase tracking-wide text-gray-500">Form</span>
+                                    <span className="flex items-center gap-1 text-lg">
+                                        <TrendIcon trend={driver.trend} />
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="mt-3 flex items-center justify-between">
+                                <div
+                                    className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center p-2"
+                                    style={{ backgroundColor: `${teamColor}33` }}
+                                >
+                                    <img
+                                        src={teamLogoUrl}
+                                        alt={driver.team}
+                                        className="w-full h-full object-contain"
+                                    />
+                                </div>
+                                <span className="text-xs text-gray-400">
+                                    Updated &bull; {driver.recentRace || 'Latest rounds'}
+                                </span>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
                 <thead className="bg-gray-900/70">
                     <tr>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Pos</th>
@@ -1655,11 +1734,8 @@ const DriverPerformanceTrendsTable = ({ trends }) => {
                 </tbody>
             </table>
         </div>
+        </div>
     );
 };
 
 export default SeasonAnalysis;
-
-
-
-

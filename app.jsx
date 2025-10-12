@@ -1605,12 +1605,102 @@ const ConstructorStandingsCard = ({ standings, loading }) => {
     if (loading) return <div className="text-center p-8 text-gray-300">Loading constructor standings...</div>;
     if (standings.length === 0) return <div className="text-center p-8 text-gray-400">No standings data available</div>;
 
+    const toggleTeam = (teamId) => {
+        setExpandedTeam(prev => (prev === teamId ? null : teamId));
+    };
+
     return (
         <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
             <div className="p-4 sm:p-6">
                 <h2 className="text-xl font-bold text-white flex items-center"><TrophyIcon /> Constructor Championship</h2>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Mobile-friendly constructor standings */}
+            <div className="sm:hidden space-y-3 px-4 pb-4">
+                {standings.map((standing) => {
+                    const teamColor = getTeamColor(standing.Constructor.constructorId);
+                    const isExpanded = expandedTeam === standing.Constructor.constructorId;
+                    const teamLogoUrl = getTeamLogoUrl(standing.Constructor.constructorId);
+
+                    return (
+                        <div
+                            key={`mobile-${standing.position}`}
+                            className="rounded-lg border border-gray-700/50 bg-gray-900/40 overflow-hidden transition-shadow hover:shadow-lg"
+                            style={{
+                                backgroundColor: `${teamColor}18`,
+                                borderLeft: `4px solid ${teamColor}`
+                            }}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => toggleTeam(standing.Constructor.constructorId)}
+                                className="w-full text-left p-4 flex items-center gap-3"
+                            >
+                                <div className="text-2xl font-bold text-white w-10 text-center">
+                                    {standing.position}
+                                </div>
+                                <div
+                                    className="w-12 h-12 rounded-full flex items-center justify-center p-2 flex-shrink-0"
+                                    style={{ backgroundColor: teamColor }}
+                                >
+                                    {teamLogoUrl ? (
+                                        <img
+                                            src={teamLogoUrl}
+                                            alt={standing.Constructor.name}
+                                            className="w-full h-full object-contain"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                const fallback = document.createElement('span');
+                                                fallback.className = 'text-xs font-bold text-white';
+                                                fallback.textContent = standing.Constructor.name.slice(0, 3).toUpperCase();
+                                                e.target.parentElement.appendChild(fallback);
+                                            }}
+                                        />
+                                    ) : (
+                                        <span className="text-xs font-bold text-white">
+                                            {standing.Constructor.name.slice(0, 3).toUpperCase()}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-semibold text-white truncate">{standing.Constructor.name}</div>
+                                    <div className="text-xs text-gray-400 flex items-center gap-2 mt-1">
+                                        <span className="text-lg">{getNationalityFlag(normalizeNationality(standing.Constructor.nationality))}</span>
+                                        <span className="truncate">{standing.Constructor.nationality}</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xl font-bold text-white">{standing.points}</div>
+                                    <div className="text-xs text-gray-400">points</div>
+                                    <div className="text-xs text-yellow-400 mt-1">{standing.wins} wins</div>
+                                </div>
+                                <div className={`transform transition-transform duration-300 text-gray-400 ${isExpanded ? 'rotate-180' : ''}`}>
+                                    <ChevronDownIcon />
+                                </div>
+                            </button>
+                            <div className="px-4 pb-4 space-y-3">
+                                <div className="grid grid-cols-2 gap-3 text-xs text-gray-300">
+                                    <div className="flex items-center justify-between bg-gray-900/40 px-3 py-2 rounded-lg">
+                                        <span className="uppercase tracking-wide text-gray-500">Wins</span>
+                                        <span className="font-semibold text-yellow-400">{standing.wins}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between bg-gray-900/40 px-3 py-2 rounded-lg">
+                                        <span className="uppercase tracking-wide text-gray-500">Points</span>
+                                        <span className="font-semibold text-white">{standing.points}</span>
+                                    </div>
+                                </div>
+                                {isExpanded && (
+                                    <div className="border-t border-gray-700/60 pt-3">
+                                        <ConstructorDetails standing={standing} teamColor={teamColor} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="hidden sm:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-700">
                     <thead className="bg-gray-900/70">
                         <tr>
@@ -1635,7 +1725,7 @@ const ConstructorStandingsCard = ({ standings, loading }) => {
                                             backgroundColor: `${teamColor}15`,
                                             borderLeft: `4px solid ${teamColor}`
                                         }}
-                                        onClick={() => setExpandedTeam(isExpanded ? null : standing.Constructor.constructorId)}
+                                        onClick={() => toggleTeam(standing.Constructor.constructorId)}
                                     >
                                         <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-white">{standing.position}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -2042,7 +2132,7 @@ const RaceCard = ({ race, isExpanded, onToggle, onImageClick }) => {
             <button onClick={onToggle} className="w-full text-left p-4 sm:p-6 flex justify-between items-center hover:bg-gray-700/30 gap-4">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center mb-2">
-                        <span className="text-xs font-bold text-gray-400 mr-2">Round {race.round}</span>
+                        <span className="text-xs font-bold text-gray-400 mr-2 whitespace-nowrap">Round {race.round}</span>
                         <span className={`text-xs font-bold uppercase py-1 px-2 rounded-full ${
                             race.isPast ? 'bg-green-500/20 text-green-300' : 'bg-blue-500/20 text-blue-300'
                         }`}>
@@ -2124,8 +2214,8 @@ const RaceCard = ({ race, isExpanded, onToggle, onImageClick }) => {
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-400">Round:</span>
-                                        <span className="text-white font-semibold">{race.round} / {race.season}</span>
+                                        <span className="text-gray-400 whitespace-nowrap">Round:</span>
+                                        <span className="text-white font-semibold whitespace-nowrap">{race.round} / {race.season}</span>
                                     </div>
                                 </div>
                             </div>
@@ -2419,10 +2509,10 @@ const RaceCalendarEnhanced = ({ schedule, loading }) => {
                 </h2>
 
                 {/* Filter Tabs */}
-                <div className="flex gap-2 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
                     <button
                         onClick={() => setFilter('all')}
-                        className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                        className={`w-full px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-between sm:justify-center gap-2 ${
                             filter === 'all'
                                 ? 'bg-red-600 text-white shadow-lg'
                                 : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
@@ -2437,7 +2527,7 @@ const RaceCalendarEnhanced = ({ schedule, loading }) => {
                     </button>
                     <button
                         onClick={() => setFilter('upcoming')}
-                        className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                        className={`w-full px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-between sm:justify-center gap-2 ${
                             filter === 'upcoming'
                                 ? 'bg-blue-600 text-white shadow-lg'
                                 : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
@@ -2452,7 +2542,7 @@ const RaceCalendarEnhanced = ({ schedule, loading }) => {
                     </button>
                     <button
                         onClick={() => setFilter('previous')}
-                        className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                        className={`w-full px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-between sm:justify-center gap-2 ${
                             filter === 'previous'
                                 ? 'bg-green-600 text-white shadow-lg'
                                 : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
@@ -2621,9 +2711,4 @@ export default function App() {
         </div>
     );
 }
-
-
-
-
-
 
