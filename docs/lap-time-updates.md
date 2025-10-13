@@ -8,7 +8,7 @@ This document summarizes the recent changes to lap-time handling and their impac
 - Browser bundles are unaffected because the fallback only initializes when `process.versions.node` is available.
 
 ## Paginated lap aggregation
-- Lap requests now iterate through every page of Jolpi lap data (200 laps per page) until the declared `total` count is satisfied.
+- Lap requests now load race-wide lap snapshots (up to 2000 timing entries per page) and split them into per-driver arrays locally.
 - Partial responses are cached only after a successful page fetch so repeated verification runs avoid redundant network trips.
 - Errors per page are logged and break the loop to prevent infinite retries while still returning any laps that were already retrieved.
 
