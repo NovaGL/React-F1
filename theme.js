@@ -318,31 +318,9 @@ export const getDriverHeadshotUrl = (driver, options = {}) => {
   return buildF1HeadshotUrl(primarySeason, slug);
 };
 
-// Full-color team logos (for special sections like Last Race podium)
-export const TEAM_LOGOS_COLOR = {
-  red_bull: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/redbullracing/2025redbullracinglogo.webp',
-  ferrari: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/ferrari/2025ferrarilogo.webp',
-  mercedes: 'https://cdn.brandfetch.io/idsWGwlSmy/theme/light/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1728451883920', // Keep the teal one
-  mclaren: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/mclaren/2025mclarenlogo.webp',
-  aston_martin: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/astonmartin/2025astonmartinlogo.webp',
-  alpine: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/alpine/2025alpinelogo.webp',
-  williams: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/williams/2025williamslogo.webp',
-  haas: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/haas/2025haaslogo.webp',
-  rb: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/racingbulls/2025racingbullslogo.webp',
-  racing_bulls: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/racingbulls/2025racingbullslogo.webp',
-  sauber: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/kicksauber/2025kicksauberlogo.webp',
-  kick_sauber: 'https://media.formula1.com/image/upload/c_lfill,w_96/q_auto/v1740000000/common/f1/2025/kicksauber/2025kicksauberlogo.webp',
-};
-
-export const getTeamLogoUrl = (team, width = 48, options = {}) => {
-  const { fullColor = false } = options;
+export const getTeamLogoUrl = (team, width = 48) => {
   const teamId = normalizeTeamId(team);
   if (!teamId) return null;
-
-  // If full color requested, use color logos
-  if (fullColor && TEAM_LOGOS_COLOR[teamId]) {
-    return TEAM_LOGOS_COLOR[teamId];
-  }
 
   // Red Bull uses local logo, Racing Bulls uses Cloudinary
   if (teamId === 'red_bull') {
