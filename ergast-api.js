@@ -426,25 +426,17 @@ async function loadRaceLapAggregation(season, round) {
       return null;
     }
 
-    const normalizedMap = new Map();
-    for (const [driverKey, laps] of driverLapMap.entries()) {
-      const normalized = normalizeLapSeries(laps);
-      if (normalized.length > 0) {
-        normalizedMap.set(driverKey, normalized);
-      }
-    }
-
-    if (normalizedMap.size === 0) {
-      return null;
+    for (const laps of driverLapMap.values()) {
+      laps.sort((a, b) => a.lap - b.lap);
     }
 
     const cacheEntry = {
-      data: normalizedMap,
+      data: driverLapMap,
       timestamp: Date.now(),
     };
 
     raceLapAggregationCache.set(raceCacheKey, cacheEntry);
-    return normalizedMap;
+    return driverLapMap;
   })()
     .catch((error) => {
       console.error(`Failed to aggregate lap data for ${season} round ${round}:`, error);
@@ -463,7 +455,7 @@ export async function getLapTimes(season, round, driverId) {
   const cacheKey = `lap-times-${season}-${round}-${driverId}`;
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < 3600000) {
-    return cloneLapSeries(cached.data);
+    return cached.data;
   }
 
   const raceAggregation = await loadRaceLapAggregation(season, round);
@@ -472,20 +464,19 @@ export async function getLapTimes(season, round, driverId) {
     const now = Date.now();
     for (const [driverKey, laps] of raceAggregation.entries()) {
       const driverCacheKey = `lap-times-${season}-${round}-${driverKey}`;
-      cache.set(driverCacheKey, { data: cloneLapSeries(laps), timestamp: now });
+      cache.set(driverCacheKey, { data: laps, timestamp: now });
     }
 
     if (raceAggregation.has(driverId)) {
-      return cloneLapSeries(raceAggregation.get(driverId));
+      return raceAggregation.get(driverId);
     }
   }
 
   try {
     const fallbackLaps = await getLapTimesFromOpenF1(season, round, driverId);
-    const normalizedFallback = normalizeLapSeries(fallbackLaps);
-    if (normalizedFallback.length > 0) {
-      cache.set(cacheKey, { data: normalizedFallback, timestamp: Date.now() });
-      return cloneLapSeries(normalizedFallback);
+    if (fallbackLaps.length > 0) {
+      cache.set(cacheKey, { data: fallbackLaps, timestamp: Date.now() });
+      return fallbackLaps;
     }
   } catch (error) {
     console.warn(`OpenF1 fallback failed for ${season} round ${round}:`, error);
