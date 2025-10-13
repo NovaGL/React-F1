@@ -1800,6 +1800,7 @@ const LapTimeChart = ({ race }) => {
     const [loading, setLoading] = useState(true);
     const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
     const [allDrivers, setAllDrivers] = useState([]);
+    const [driverOptions, setDriverOptions] = useState([]);
     const [searchInput, setSearchInput] = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
 
@@ -1815,7 +1816,12 @@ const LapTimeChart = ({ race }) => {
                     race.results.length
                 )
             );
-            const driversToFetch = race.results.slice(0, limit);
+            const driversToFetch = race.results.slice(0, limit).map(result => ({
+                driver: result.Driver,
+                constructor: result.Constructor,
+                laps: [],
+                hasLapData: false
+            }));
             setLoadingProgress({ current: 0, total: driversToFetch.length });
 
             try {
@@ -1823,20 +1829,22 @@ const LapTimeChart = ({ race }) => {
 
                 // Fetch lap times sequentially with delay to avoid rate limiting
                 for (let i = 0; i < driversToFetch.length; i++) {
-                    const result = driversToFetch[i];
+                    const entry = driversToFetch[i];
                     setLoadingProgress({ current: i + 1, total: driversToFetch.length });
 
                     try {
-                        const laps = await ErgastAPI.getLapTimes(race.season, race.round, result.Driver.driverId);
+                        const laps = await ErgastAPI.getLapTimes(race.season, race.round, entry.driver.driverId);
                         if (laps && laps.length > 0) {
+                            entry.laps = laps;
+                            entry.hasLapData = true;
                             driverLaps.push({
-                                driver: result.Driver,
-                                constructor: result.Constructor,
+                                driver: entry.driver,
+                                constructor: entry.constructor,
                                 laps: laps
                             });
                         }
                     } catch (err) {
-                        console.warn(`No lap data for ${result.Driver.familyName}`);
+                        console.warn(`No lap data for ${entry.driver.familyName}`);
                     }
 
                     // Add delay between requests to avoid rate limiting (200ms)
@@ -1846,7 +1854,8 @@ const LapTimeChart = ({ race }) => {
                 }
 
                 setLapData(driverLaps);
-                setAllDrivers(driverLaps.map(d => d.driver.driverId));
+                setDriverOptions(driversToFetch);
+                setAllDrivers(driversToFetch.map(d => d.driver.driverId));
                 // Auto-select top drivers (capped at 5 for readability)
                 const autoSelectCount = Math.min(5, driverLaps.length);
                 setSelectedDrivers(driverLaps.slice(0, autoSelectCount).map(d => d.driver.driverId));
@@ -2013,8 +2022,10 @@ const LapTimeChart = ({ race }) => {
         setSelectedDrivers(selectedDrivers.filter(id => id !== driverId));
     };
 
-    const selectedDriversData = lapData.filter(d => selectedDrivers.includes(d.driver.driverId));
-    const availableDrivers = lapData.filter(d => !selectedDrivers.includes(d.driver.driverId));
+    const selectedDriversData = driverOptions.filter(d => selectedDrivers.includes(d.driver.driverId));
+    const availableDrivers = driverOptions
+        .filter(d => !selectedDrivers.includes(d.driver.driverId))
+        .sort((a, b) => Number(b.hasLapData) - Number(a.hasLapData));
     const filteredDrivers = searchInput
         ? availableDrivers.filter(d => {
             const fullName = `${d.driver.givenName} ${d.driver.familyName}`.toLowerCase();
@@ -2023,6 +2034,9 @@ const LapTimeChart = ({ race }) => {
             return fullName.includes(search) || code.includes(search);
         })
         : availableDrivers;
+
+    const driversWithoutData = driverOptions.filter(d => !d.hasLapData);
+    const selectedWithoutData = selectedDriversData.filter(d => !d.hasLapData);
 
     return (
         <div className="mt-6">
@@ -2055,8 +2069,13 @@ const LapTimeChart = ({ race }) => {
                                         />
                                     </div>
                                     <span className="text-sm font-medium text-white">
-                                        {driverData.driver.code || `${driverData.driver.givenName.charAt(0)}. ${driverData.driver.familyName}`}
+                                        {driverData.driver.code || `${driverData.driver.givenName} ${driverData.driver.familyName}`}
                                     </span>
+                                    {!driverData.hasLapData && (
+                                        <span className="text-[10px] uppercase tracking-wide text-yellow-400 bg-yellow-500/10 border border-yellow-500/40 rounded px-1 py-0.5">
+                                            No lap data
+                                        </span>
+                                    )}
                                     {selectedDrivers.length > 1 && (
                                         <button
                                             onClick={() => removeDriver(driverData.driver.driverId)}
@@ -2096,7 +2115,7 @@ const LapTimeChart = ({ race }) => {
                                         addDriver(driverData.driver.driverId);
                                         setSearchInput('');
                                     }}
-                                    className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-700 transition-colors text-left"
+                                    className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left hover:bg-gray-700 ${driverData.hasLapData ? '' : 'opacity-75'}`}
                                 >
                                     <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-900 flex-shrink-0 ring-2"
                                         style={{ ringColor: teamColor }}>
@@ -2112,6 +2131,9 @@ const LapTimeChart = ({ race }) => {
                                             {driverData.driver.givenName} {driverData.driver.familyName}
                                         </div>
                                         <div className="text-xs text-gray-400">{driverData.constructor.name}</div>
+                                        {!driverData.hasLapData && (
+                                            <div className="text-[11px] text-yellow-500 mt-1">Lap data unavailable</div>
+                                        )}
                                     </div>
                                 </button>
                             );
@@ -2120,8 +2142,24 @@ const LapTimeChart = ({ race }) => {
                 )}
             </div>
 
+            {driversWithoutData.length > 0 && (
+                <p className="mt-2 text-xs text-yellow-400">
+                    Lap time data is not provided by the API for {driversWithoutData.length} of the top drivers. They remain selectable but will be noted as unavailable.
+                </p>
+            )}
+
+            {selectedWithoutData.length > 0 && (
+                <div className="mt-2 text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
+                    {selectedWithoutData.length === 1 ? 'Lap data is unavailable for the selected driver.' : 'Lap data is unavailable for some of the selected drivers.'}
+                </div>
+            )}
+
             {/* Chart */}
-            {selectedDrivers.length > 0 ? (
+            {selectedDrivers.length === 0 ? (
+                <div className="text-gray-400 text-center py-8 bg-gray-900/50 rounded-lg border border-gray-700/50">
+                    Select at least one driver to view lap times
+                </div>
+            ) : filteredData.length > 0 ? (
                 <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
                     <div style={{ height: '400px' }}>
                         <Line data={chartData} options={chartOptions} />
@@ -2129,7 +2167,7 @@ const LapTimeChart = ({ race }) => {
                 </div>
             ) : (
                 <div className="text-gray-400 text-center py-8 bg-gray-900/50 rounded-lg border border-gray-700/50">
-                    Select at least one driver to view lap times
+                    Lap time data is unavailable for the currently selected drivers
                 </div>
             )}
         </div>
