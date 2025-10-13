@@ -180,6 +180,93 @@ const useNextRace = () => {
     useEffect(() => {
         let cancelled = false;
 
+        const loadNextRace = async () => {
+            setLoading(true);
+            try {
+                const schedule = await ErgastAPI.getCurrentSchedule();
+                if (cancelled) {
+                    return;
+                }
+
+                const now = new Date();
+                const upcomingRace = (schedule || []).find(event => {
+                    if (!event?.date) return false;
+                    const raceTime = event.time ? event.time : '00:00:00Z';
+                    const raceDate = new Date(`${event.date}T${raceTime}`);
+                    return raceDate > now;
+                });
+
+                setNextRace(upcomingRace || null);
+                if (!upcomingRace) {
+                    setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    console.error('Error fetching next race schedule:', error);
+                    setNextRace(null);
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadNextRace();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!nextRace) {
+            return undefined;
+        }
+
+        const raceTime = nextRace.time ? nextRace.time : '00:00:00Z';
+        const targetDate = new Date(`${nextRace.date}T${raceTime}`);
+
+        const updateCountdown = () => {
+            const now = new Date();
+            const diff = targetDate.getTime() - now.getTime();
+
+            if (diff <= 0) {
+                setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+                return;
+            }
+
+            const totalSeconds = Math.floor(diff / 1000);
+            const days = Math.floor(totalSeconds / (24 * 3600));
+            const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            setCountdown({ days, hours, minutes, seconds });
+        };
+
+        updateCountdown();
+        const intervalId = setInterval(updateCountdown, 1000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [nextRace]);
+
+    return { nextRace, countdown, loading };
+};
+
+const LapTimeChart = ({ race }) => {
+    const [lapData, setLapData] = useState([]);
+    const [driverOptions, setDriverOptions] = useState([]);
+    const [selectedDrivers, setSelectedDrivers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchInput, setSearchInput] = useState('');
+    const [showDropdown, setShowDropdown] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+
         const autoSelect = (entries) => {
             const lapEntries = entries.filter(entry => entry.hasLapData);
             const autoSelectCount = Math.max(
@@ -210,7 +297,7 @@ const useNextRace = () => {
                     .slice(0, Math.min(5, standings.length))
                     .map(entry => entry.Driver.driverId);
 
-                const raceDriverIds = race.results.map(result => result.Driver.driverId);
+                const raceDriverIds = (race.results || []).map(result => result.Driver.driverId);
                 const combinedIds = Array.from(new Set([...topSeasonIds, ...raceDriverIds]));
 
                 const limitCount = Math.max(
@@ -269,7 +356,6 @@ const useNextRace = () => {
 
                 if (!cancelled) {
                     setDriverOptions(entries);
-                    setAllDrivers(entries.map(entry => entry.driver.driverId));
                     autoSelect(entries);
                 }
             } catch (error) {
@@ -278,7 +364,6 @@ const useNextRace = () => {
                     setLapData([]);
                     setDriverOptions([]);
                     setSelectedDrivers([]);
-                    setAllDrivers([]);
                 }
             } finally {
                 if (!cancelled) {
@@ -288,12 +373,11 @@ const useNextRace = () => {
         };
 
         const loadFromStatic = async () => {
-            if (!race.isPast || !race.results) {
+            if (!race?.isPast || !race?.results) {
                 if (!cancelled) {
                     setLapData([]);
                     setDriverOptions([]);
                     setSelectedDrivers([]);
-                    setAllDrivers([]);
                     setLoading(false);
                 }
                 return;
@@ -346,7 +430,6 @@ const useNextRace = () => {
                 }
 
                 setDriverOptions(entries);
-                setAllDrivers(entries.map(entry => entry.driver.driverId));
                 autoSelect(entries);
             } catch (error) {
                 console.warn(`Static lap snapshot unavailable: ${error.message}`);
@@ -365,21 +448,6 @@ const useNextRace = () => {
             cancelled = true;
         };
     }, [race.isPast, race.results, race.round, race.season]);
-    const toggleDriver = (driverId) => {
-        setSelectedDrivers(prev => 
-            prev.includes(driverId) 
-                ? prev.filter(id => id !== driverId)
-                : [...prev, driverId]
-        );
-    };
-
-    const toggleAll = () => {
-        if (selectedDrivers.length === allDrivers.length) {
-            setSelectedDrivers([]);
-        } else {
-            setSelectedDrivers(allDrivers);
-        }
-    };
 
     if (loading) {
         return (
@@ -410,7 +478,7 @@ const useNextRace = () => {
 
     // Prepare chart data
     const filteredData = lapData.filter(d => selectedDrivers.includes(d.driver.driverId));
-    
+
     const chartData = {
         labels: filteredData[0]?.laps.map(lap => lap.lap) || [],
         datasets: filteredData.map(driverData => {
@@ -563,7 +631,7 @@ const useNextRace = () => {
                                         />
                                     </div>
                                     <span className="text-sm font-medium text-white">
-                                        `${driverData.driver.givenName} ${driverData.driver.familyName}`
+                                        {driverData.driver.givenName} {driverData.driver.familyName}
                                     </span>
                                     {!driverData.hasLapData && (
                                         <span className="text-[10px] uppercase tracking-wide text-yellow-400 bg-yellow-500/10 border border-yellow-500/40 rounded px-1 py-0.5">
