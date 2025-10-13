@@ -1,0 +1,528 @@
+{
+  "season": "2025",
+  "round": "4",
+  "raceName": "Bahrain Grand Prix",
+  "driver": {
+    "driverId": "leclerc",
+    "permanentNumber": "16",
+    "code": "LEC",
+    "url": "http://en.wikipedia.org/wiki/Charles_Leclerc",
+    "givenName": "Charles",
+    "familyName": "Leclerc",
+    "dateOfBirth": "1997-10-16",
+    "nationality": "Monegasque"
+  },
+  "constructor": {
+    "constructorId": "ferrari",
+    "url": "http://en.wikipedia.org/wiki/Scuderia_Ferrari",
+    "name": "Ferrari",
+    "nationality": "Italian"
+  },
+  "laps": [
+    {
+      "lap": 2,
+      "time": "1:38.048",
+      "duration": 98.048,
+      "sector1": 31.404,
+      "sector2": 42.615,
+      "sector3": 24.029,
+      "isPitLap": false
+    },
+    {
+      "lap": 3,
+      "time": "1:38.463",
+      "duration": 98.463,
+      "sector1": 31.396,
+      "sector2": 42.837,
+      "sector3": 24.23,
+      "isPitLap": false
+    },
+    {
+      "lap": 4,
+      "time": "1:38.273",
+      "duration": 98.273,
+      "sector1": 31.373,
+      "sector2": 42.588,
+      "sector3": 24.312,
+      "isPitLap": false
+    },
+    {
+      "lap": 5,
+      "time": "1:38.427",
+      "duration": 98.427,
+      "sector1": 31.449,
+      "sector2": 42.592,
+      "sector3": 24.386,
+      "isPitLap": false
+    },
+    {
+      "lap": 6,
+      "time": "1:38.784",
+      "duration": 98.784,
+      "sector1": 31.149,
+      "sector2": 43.411,
+      "sector3": 24.224,
+      "isPitLap": false
+    },
+    {
+      "lap": 7,
+      "time": "1:38.680",
+      "duration": 98.68,
+      "sector1": 31.431,
+      "sector2": 42.843,
+      "sector3": 24.406,
+      "isPitLap": false
+    },
+    {
+      "lap": 8,
+      "time": "1:39.133",
+      "duration": 99.133,
+      "sector1": 31.654,
+      "sector2": 43.109,
+      "sector3": 24.37,
+      "isPitLap": false
+    },
+    {
+      "lap": 9,
+      "time": "1:39.164",
+      "duration": 99.164,
+      "sector1": 31.658,
+      "sector2": 43.171,
+      "sector3": 24.335,
+      "isPitLap": false
+    },
+    {
+      "lap": 10,
+      "time": "1:38.881",
+      "duration": 98.881,
+      "sector1": 31.447,
+      "sector2": 43.104,
+      "sector3": 24.33,
+      "isPitLap": false
+    },
+    {
+      "lap": 11,
+      "time": "1:39.185",
+      "duration": 99.185,
+      "sector1": 31.466,
+      "sector2": 43.334,
+      "sector3": 24.385,
+      "isPitLap": false
+    },
+    {
+      "lap": 12,
+      "time": "1:38.973",
+      "duration": 98.973,
+      "sector1": 31.473,
+      "sector2": 43.085,
+      "sector3": 24.415,
+      "isPitLap": false
+    },
+    {
+      "lap": 13,
+      "time": "1:38.721",
+      "duration": 98.721,
+      "sector1": 31.428,
+      "sector2": 42.848,
+      "sector3": 24.445,
+      "isPitLap": false
+    },
+    {
+      "lap": 14,
+      "time": "1:38.870",
+      "duration": 98.87,
+      "sector1": 31.531,
+      "sector2": 42.808,
+      "sector3": 24.531,
+      "isPitLap": false
+    },
+    {
+      "lap": 15,
+      "time": "1:38.856",
+      "duration": 98.856,
+      "sector1": 31.499,
+      "sector2": 42.94,
+      "sector3": 24.417,
+      "isPitLap": false
+    },
+    {
+      "lap": 16,
+      "time": "1:39.061",
+      "duration": 99.061,
+      "sector1": 31.637,
+      "sector2": 42.888,
+      "sector3": 24.536,
+      "isPitLap": false
+    },
+    {
+      "lap": 17,
+      "time": "1:41.560",
+      "duration": 101.56,
+      "sector1": 31.569,
+      "sector2": 42.962,
+      "sector3": 27.029,
+      "isPitLap": false
+    },
+    {
+      "lap": 18,
+      "time": "1:57.817",
+      "duration": 117.817,
+      "sector1": 52.023,
+      "sector2": 42.088,
+      "sector3": 23.706,
+      "isPitLap": true
+    },
+    {
+      "lap": 19,
+      "time": "1:36.876",
+      "duration": 96.876,
+      "sector1": 30.963,
+      "sector2": 42.137,
+      "sector3": 23.776,
+      "isPitLap": false
+    },
+    {
+      "lap": 20,
+      "time": "1:37.206",
+      "duration": 97.206,
+      "sector1": 31.067,
+      "sector2": 42.377,
+      "sector3": 23.762,
+      "isPitLap": false
+    },
+    {
+      "lap": 21,
+      "time": "1:37.393",
+      "duration": 97.393,
+      "sector1": 31.197,
+      "sector2": 42.385,
+      "sector3": 23.811,
+      "isPitLap": false
+    },
+    {
+      "lap": 22,
+      "time": "1:37.363",
+      "duration": 97.363,
+      "sector1": 31.076,
+      "sector2": 42.343,
+      "sector3": 23.944,
+      "isPitLap": false
+    },
+    {
+      "lap": 23,
+      "time": "1:37.666",
+      "duration": 97.666,
+      "sector1": 31.263,
+      "sector2": 42.373,
+      "sector3": 24.03,
+      "isPitLap": false
+    },
+    {
+      "lap": 24,
+      "time": "1:38.013",
+      "duration": 98.013,
+      "sector1": 31.349,
+      "sector2": 42.594,
+      "sector3": 24.07,
+      "isPitLap": false
+    },
+    {
+      "lap": 25,
+      "time": "1:37.452",
+      "duration": 97.452,
+      "sector1": 31.003,
+      "sector2": 42.339,
+      "sector3": 24.11,
+      "isPitLap": false
+    },
+    {
+      "lap": 26,
+      "time": "1:37.476",
+      "duration": 97.476,
+      "sector1": 31.266,
+      "sector2": 42.274,
+      "sector3": 23.936,
+      "isPitLap": false
+    },
+    {
+      "lap": 27,
+      "time": "1:37.947",
+      "duration": 97.947,
+      "sector1": 31.317,
+      "sector2": 42.358,
+      "sector3": 24.272,
+      "isPitLap": false
+    },
+    {
+      "lap": 28,
+      "time": "1:38.105",
+      "duration": 98.105,
+      "sector1": 31.487,
+      "sector2": 42.443,
+      "sector3": 24.175,
+      "isPitLap": false
+    },
+    {
+      "lap": 29,
+      "time": "1:37.781",
+      "duration": 97.781,
+      "sector1": 31.339,
+      "sector2": 42.247,
+      "sector3": 24.195,
+      "isPitLap": false
+    },
+    {
+      "lap": 30,
+      "time": "1:37.619",
+      "duration": 97.619,
+      "sector1": 31.483,
+      "sector2": 42.092,
+      "sector3": 24.044,
+      "isPitLap": false
+    },
+    {
+      "lap": 31,
+      "time": "1:38.048",
+      "duration": 98.048,
+      "sector1": 31.441,
+      "sector2": 42.434,
+      "sector3": 24.173,
+      "isPitLap": false
+    },
+    {
+      "lap": 32,
+      "time": "1:51.116",
+      "duration": 111.116,
+      "sector1": 31.341,
+      "sector2": 45.608,
+      "sector3": 34.167,
+      "isPitLap": false
+    },
+    {
+      "lap": 33,
+      "time": "2:38.070",
+      "duration": 158.07,
+      "sector1": 61.227,
+      "sector2": 61.565,
+      "sector3": 35.278,
+      "isPitLap": true
+    },
+    {
+      "lap": 34,
+      "time": "2:19.711",
+      "duration": 139.711,
+      "sector1": 43.895,
+      "sector2": 61.616,
+      "sector3": 34.2,
+      "isPitLap": false
+    },
+    {
+      "lap": 35,
+      "time": "2:25.578",
+      "duration": 145.578,
+      "sector1": 42.81,
+      "sector2": 60.946,
+      "sector3": 41.822,
+      "isPitLap": false
+    },
+    {
+      "lap": 36,
+      "time": "1:36.132",
+      "duration": 96.132,
+      "sector1": 31.175,
+      "sector2": 41.388,
+      "sector3": 23.569,
+      "isPitLap": false
+    },
+    {
+      "lap": 37,
+      "time": "1:36.324",
+      "duration": 96.324,
+      "sector1": 30.795,
+      "sector2": 41.87,
+      "sector3": 23.659,
+      "isPitLap": false
+    },
+    {
+      "lap": 38,
+      "time": "1:36.142",
+      "duration": 96.142,
+      "sector1": 30.853,
+      "sector2": 41.566,
+      "sector3": 23.723,
+      "isPitLap": false
+    },
+    {
+      "lap": 39,
+      "time": "1:36.198",
+      "duration": 96.198,
+      "sector1": 30.894,
+      "sector2": 41.559,
+      "sector3": 23.745,
+      "isPitLap": false
+    },
+    {
+      "lap": 40,
+      "time": "1:36.280",
+      "duration": 96.28,
+      "sector1": 30.873,
+      "sector2": 41.741,
+      "sector3": 23.666,
+      "isPitLap": false
+    },
+    {
+      "lap": 41,
+      "time": "1:36.493",
+      "duration": 96.493,
+      "sector1": 30.927,
+      "sector2": 41.766,
+      "sector3": 23.8,
+      "isPitLap": false
+    },
+    {
+      "lap": 42,
+      "time": "1:36.304",
+      "duration": 96.304,
+      "sector1": 30.919,
+      "sector2": 41.57,
+      "sector3": 23.815,
+      "isPitLap": false
+    },
+    {
+      "lap": 43,
+      "time": "1:36.506",
+      "duration": 96.506,
+      "sector1": 30.927,
+      "sector2": 41.89,
+      "sector3": 23.689,
+      "isPitLap": false
+    },
+    {
+      "lap": 44,
+      "time": "1:36.547",
+      "duration": 96.547,
+      "sector1": 30.914,
+      "sector2": 41.889,
+      "sector3": 23.744,
+      "isPitLap": false
+    },
+    {
+      "lap": 45,
+      "time": "1:36.700",
+      "duration": 96.7,
+      "sector1": 30.937,
+      "sector2": 41.969,
+      "sector3": 23.794,
+      "isPitLap": false
+    },
+    {
+      "lap": 46,
+      "time": "1:36.894",
+      "duration": 96.894,
+      "sector1": 31.118,
+      "sector2": 42.092,
+      "sector3": 23.684,
+      "isPitLap": false
+    },
+    {
+      "lap": 47,
+      "time": "1:36.774",
+      "duration": 96.774,
+      "sector1": 31.053,
+      "sector2": 41.941,
+      "sector3": 23.78,
+      "isPitLap": false
+    },
+    {
+      "lap": 48,
+      "time": "1:36.954",
+      "duration": 96.954,
+      "sector1": 31.116,
+      "sector2": 41.992,
+      "sector3": 23.846,
+      "isPitLap": false
+    },
+    {
+      "lap": 49,
+      "time": "1:37.658",
+      "duration": 97.658,
+      "sector1": 31.649,
+      "sector2": 42.201,
+      "sector3": 23.808,
+      "isPitLap": false
+    },
+    {
+      "lap": 50,
+      "time": "1:36.956",
+      "duration": 96.956,
+      "sector1": 31.059,
+      "sector2": 42.132,
+      "sector3": 23.765,
+      "isPitLap": false
+    },
+    {
+      "lap": 51,
+      "time": "1:37.279",
+      "duration": 97.279,
+      "sector1": 31.185,
+      "sector2": 42.159,
+      "sector3": 23.935,
+      "isPitLap": false
+    },
+    {
+      "lap": 52,
+      "time": "1:38.423",
+      "duration": 98.423,
+      "sector1": 31.588,
+      "sector2": 42.692,
+      "sector3": 24.143,
+      "isPitLap": false
+    },
+    {
+      "lap": 53,
+      "time": "1:37.583",
+      "duration": 97.583,
+      "sector1": 31.288,
+      "sector2": 42.278,
+      "sector3": 24.017,
+      "isPitLap": false
+    },
+    {
+      "lap": 54,
+      "time": "1:37.794",
+      "duration": 97.794,
+      "sector1": 31.127,
+      "sector2": 42.614,
+      "sector3": 24.053,
+      "isPitLap": false
+    },
+    {
+      "lap": 55,
+      "time": "1:37.586",
+      "duration": 97.586,
+      "sector1": 31.324,
+      "sector2": 42.224,
+      "sector3": 24.038,
+      "isPitLap": false
+    },
+    {
+      "lap": 56,
+      "time": "1:37.666",
+      "duration": 97.666,
+      "sector1": 31.216,
+      "sector2": 42.39,
+      "sector3": 24.06,
+      "isPitLap": false
+    },
+    {
+      "lap": 57,
+      "time": "1:38.273",
+      "duration": 98.273,
+      "sector1": 31.476,
+      "sector2": 42.583,
+      "sector3": 24.214,
+      "isPitLap": false
+    }
+  ],
+  "lapError": null
+}

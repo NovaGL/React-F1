@@ -1,0 +1,213 @@
+{
+  "season": "2025",
+  "round": "15",
+  "raceName": "Dutch Grand Prix",
+  "driver": {
+    "driverId": "hamilton",
+    "permanentNumber": "44",
+    "code": "HAM",
+    "url": "http://en.wikipedia.org/wiki/Lewis_Hamilton",
+    "givenName": "Lewis",
+    "familyName": "Hamilton",
+    "dateOfBirth": "1985-01-07",
+    "nationality": "British"
+  },
+  "constructor": {
+    "constructorId": "ferrari",
+    "url": "http://en.wikipedia.org/wiki/Scuderia_Ferrari",
+    "name": "Ferrari",
+    "nationality": "Italian"
+  },
+  "laps": [
+    {
+      "lap": 2,
+      "time": "1:16.716",
+      "duration": 76.716,
+      "sector1": 26.405,
+      "sector2": 27.548,
+      "sector3": 22.763,
+      "isPitLap": false
+    },
+    {
+      "lap": 3,
+      "time": "1:16.449",
+      "duration": 76.449,
+      "sector1": 26.112,
+      "sector2": 27.692,
+      "sector3": 22.645,
+      "isPitLap": false
+    },
+    {
+      "lap": 4,
+      "time": "1:16.570",
+      "duration": 76.57,
+      "sector1": 26.331,
+      "sector2": 27.56,
+      "sector3": 22.679,
+      "isPitLap": false
+    },
+    {
+      "lap": 5,
+      "time": "1:16.432",
+      "duration": 76.432,
+      "sector1": 26.2,
+      "sector2": 27.394,
+      "sector3": 22.838,
+      "isPitLap": false
+    },
+    {
+      "lap": 6,
+      "time": "1:15.684",
+      "duration": 75.684,
+      "sector1": 25.949,
+      "sector2": 27.151,
+      "sector3": 22.584,
+      "isPitLap": false
+    },
+    {
+      "lap": 7,
+      "time": "1:16.036",
+      "duration": 76.036,
+      "sector1": 25.946,
+      "sector2": 27.467,
+      "sector3": 22.623,
+      "isPitLap": false
+    },
+    {
+      "lap": 8,
+      "time": "1:15.962",
+      "duration": 75.962,
+      "sector1": 25.826,
+      "sector2": 27.457,
+      "sector3": 22.679,
+      "isPitLap": false
+    },
+    {
+      "lap": 9,
+      "time": "1:15.856",
+      "duration": 75.856,
+      "sector1": 25.855,
+      "sector2": 27.24,
+      "sector3": 22.761,
+      "isPitLap": false
+    },
+    {
+      "lap": 10,
+      "time": "1:16.114",
+      "duration": 76.114,
+      "sector1": 25.95,
+      "sector2": 27.421,
+      "sector3": 22.743,
+      "isPitLap": false
+    },
+    {
+      "lap": 11,
+      "time": "1:16.558",
+      "duration": 76.558,
+      "sector1": 26.071,
+      "sector2": 27.54,
+      "sector3": 22.947,
+      "isPitLap": false
+    },
+    {
+      "lap": 12,
+      "time": "1:16.171",
+      "duration": 76.171,
+      "sector1": 25.917,
+      "sector2": 27.44,
+      "sector3": 22.814,
+      "isPitLap": false
+    },
+    {
+      "lap": 13,
+      "time": "1:16.480",
+      "duration": 76.48,
+      "sector1": 25.817,
+      "sector2": 27.566,
+      "sector3": 23.097,
+      "isPitLap": false
+    },
+    {
+      "lap": 14,
+      "time": "1:16.584",
+      "duration": 76.584,
+      "sector1": 25.978,
+      "sector2": 27.577,
+      "sector3": 23.029,
+      "isPitLap": false
+    },
+    {
+      "lap": 15,
+      "time": "1:16.371",
+      "duration": 76.371,
+      "sector1": 25.851,
+      "sector2": 27.537,
+      "sector3": 22.983,
+      "isPitLap": false
+    },
+    {
+      "lap": 16,
+      "time": "1:16.125",
+      "duration": 76.125,
+      "sector1": 25.795,
+      "sector2": 27.358,
+      "sector3": 22.972,
+      "isPitLap": false
+    },
+    {
+      "lap": 17,
+      "time": "1:16.179",
+      "duration": 76.179,
+      "sector1": 25.87,
+      "sector2": 27.371,
+      "sector3": 22.938,
+      "isPitLap": false
+    },
+    {
+      "lap": 18,
+      "time": "1:16.028",
+      "duration": 76.028,
+      "sector1": 25.716,
+      "sector2": 27.559,
+      "sector3": 22.753,
+      "isPitLap": false
+    },
+    {
+      "lap": 19,
+      "time": "1:16.171",
+      "duration": 76.171,
+      "sector1": 25.706,
+      "sector2": 27.698,
+      "sector3": 22.767,
+      "isPitLap": false
+    },
+    {
+      "lap": 20,
+      "time": "1:16.561",
+      "duration": 76.561,
+      "sector1": 25.935,
+      "sector2": 27.753,
+      "sector3": 22.873,
+      "isPitLap": false
+    },
+    {
+      "lap": 21,
+      "time": "1:16.468",
+      "duration": 76.468,
+      "sector1": 25.767,
+      "sector2": 27.811,
+      "sector3": 22.89,
+      "isPitLap": false
+    },
+    {
+      "lap": 22,
+      "time": "1:16.926",
+      "duration": 76.926,
+      "sector1": 25.959,
+      "sector2": 27.903,
+      "sector3": 23.064,
+      "isPitLap": false
+    }
+  ],
+  "lapError": null
+}

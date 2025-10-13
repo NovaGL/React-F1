@@ -12,7 +12,7 @@ import {
 import { getCircuitData, getCircuitImageUrl } from './circuit-data';
 import { getNationalityFlag, normalizeNationality } from './nationality-flags';
 import { Line, Bar } from 'react-chartjs-2';
-import { LAP_TIME_DRIVER_LIMIT } from './config';
+import { LAP_TIME_DRIVER_LIMIT, LAP_TIME_AUTO_SELECT_COUNT } from './config';
 
 // Reusable driver image error handler to prevent infinite reload loops
 const handleDriverImageError = (e, driver, teamColor) => {
@@ -123,6 +123,21 @@ const ChevronDownIcon = () => (
     </svg>
 );
 
+const LoadingSpinner = ({ message = 'Loading...', subtext }) => (
+    <div className="text-gray-400 text-center py-8">
+        <div className="flex flex-col items-center gap-4">
+            <div className="relative w-16 h-16">
+                <div className="absolute inset-0 border-4 border-gray-700 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+            </div>
+            <div>
+                <div className="text-white font-semibold mb-1">{message}</div>
+                {subtext && <div className="text-sm text-gray-500">{subtext}</div>}
+            </div>
+        </div>
+    </div>
+);
+
 
 
 // Circuit key mapping for images
@@ -163,1754 +178,193 @@ const useNextRace = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        ErgastAPI.getNextRace()
-            .then(race => {
-                setNextRace(race);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error('Error fetching next race:', err);
-                setLoading(false);
-            });
-    }, []);
-
-    useEffect(() => {
-        if (!nextRace) return;
-
-        const interval = setInterval(() => {
-            const now = new Date();
-            const raceDate = new Date(nextRace.date + 'T' + nextRace.time);
-            const diff = raceDate - now;
-
-            if (diff > 0) {
-                setCountdown({
-                    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-                    hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-                    minutes: Math.floor((diff / 1000 / 60) % 60),
-                    seconds: Math.floor((diff / 1000) % 60)
-                });
-            }
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [nextRace]);
-
-    return { nextRace, countdown, loading };
-};
-
-// Hook for Last Race Results
-const useLastRace = () => {
-    const [lastRace, setLastRace] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        ErgastAPI.getLastRaceResults()
-            .then(race => {
-                setLastRace(race);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error('Error fetching last race:', err);
-                setLoading(false);
-            });
-    }, []);
-
-    return { lastRace, loading };
-};
-
-// Hook for Driver Standings (Ergast)
-const useDriverStandingsErgast = () => {
-    const [standings, setStandings] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        ErgastAPI.getDriverStandings()
-            .then(data => {
-                setStandings(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error('Error fetching driver standings:', err);
-                setLoading(false);
-            });
-    }, []);
-
-    return { standings, loading };
-};
-
-// Hook for Constructor Standings
-const useConstructorStandings = () => {
-    const [standings, setStandings] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        ErgastAPI.getConstructorStandings()
-            .then(data => {
-                setStandings(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error('Error fetching constructor standings:', err);
-                setLoading(false);
-            });
-    }, []);
-
-    return { standings, loading };
-};
-
-// Hook for Schedule with Results
-const useScheduleWithResults = () => {
-    const [schedule, setSchedule] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchScheduleWithResults = async () => {
-            try {
-                const races = await ErgastAPI.getCurrentSchedule();
-
-                const racesWithData = [];
-
-                for (const race of races) {
-                    const now = new Date();
-                    const raceDate = new Date(race.date + 'T' + race.time);
-                    const isPast = raceDate < now;
-
-                    let results = null;
-
-                    if (isPast) {
-                        try {
-                            const raceResults = await ErgastAPI.getRaceResults(race.season, race.round);
-                            results = raceResults?.Results || null;
-                        } catch (err) {
-                            console.log(`No current results for ${race.raceName}`);
-                        }
-                    }
-
-                    if (!results) {
-                        try {
-                            const prevRace = await ErgastAPI.getPreviousYearRace(race.Circuit.circuitId, parseInt(race.season, 10));
-                            results = prevRace?.Results || null;
-                        } catch (err) {
-                            console.log(`No previous year results for ${race.raceName}`);
-                        }
-                    }
-
-                    racesWithData.push({ ...race, results, isPast });
-                }
-
-                setSchedule(racesWithData);
-                setLoading(false);
-            } catch (err) {
-                console.error('Error fetching schedule:', err);
-                setLoading(false);
-            }
-        };
-
-        fetchScheduleWithResults();
-    }, []);
-
-    return { schedule, loading };
-};
-
-// --- COMPONENTS ---
-
-const Header = ({ activeTab, setActiveTab }) => (
-    <header className="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-20 shadow-lg shadow-black/20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-       <div className="flex items-center">
-    <h1 className="text-2xl font-bold text-white tracking-wider flex items-center">
-        <F1Logo height={18} />
-        <span className="f1-stats text-white italic" style={{marginLeft: '-1px', transform: 'translateX(-1px)'}}>
-           STATS
-        </span>
-    </h1>                    
-</div>
-
-                <nav className="hidden md:flex items-center space-x-2">
-                    {[
-                        { name: 'Dashboard', icon: <HomeIcon /> },
-                        { name: 'Drivers', icon: <UsersIcon /> },
-                        { name: 'Constructors', icon: <TrophyIcon /> },
-                        { name: 'Calendar', icon: <CalendarIcon /> },
-                        { name: 'Season Analysis', icon: <TrendIcon /> }
-                    ].map((tab) => (
-                        <button
-                            key={tab.name}
-                            onClick={() => setActiveTab(tab.name)}
-                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center ${
-                                activeTab === tab.name
-                                    ? 'bg-red-600 text-white'
-                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                            }`}
-                        >
-                            {tab.icon}
-                            <span>{tab.name}</span>
-                        </button>
-                    ))}
-                </nav>
-            </div>
-        </div>
-    </header>
-);
-
-// Dashboard Overview Component
-const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, lastRaceLoading, driverStandings, driverLoading, constructorStandings, constructorLoading }) => {
-    if (nextRaceLoading || lastRaceLoading || driverLoading || constructorLoading) {
-        return <div className="text-center p-8 text-gray-300">Loading dashboard...</div>;
-    }
-
-    const raceDate = nextRace ? new Date(nextRace.date + 'T' + nextRace.time) : null;
-
-    return (
-        <div className="space-y-6">
-            {/* Next Race Countdown - Hero Section */}
-            {nextRace && (
-                <div className="bg-gradient-to-r from-red-600/20 to-gray-800/50 rounded-lg shadow-xl overflow-hidden border border-red-500/20">
-                    <div className="p-6">
-                        <div className="flex items-center mb-4">
-                            <ClockIcon />
-                            <h2 className="text-2xl font-bold text-white">Next Race</h2>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <h3 className="text-3xl font-bold text-red-500 mb-2">{nextRace.raceName}</h3>
-                                <p className="text-xl text-gray-300 mb-1">{nextRace.Circuit.circuitName}</p>
-                                <p className="text-lg text-gray-400 mb-4">{nextRace.Circuit.Location.locality}, {nextRace.Circuit.Location.country}</p>
-                                <p className="text-md text-gray-400 font-mono">
-                                    {raceDate?.toLocaleDateString('en-US', {
-                                        weekday: 'long',
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                    })}
-                                </p>
-                            </div>
-                            <div className="bg-gray-900/50 p-6 rounded-lg">
-                                <h4 className="text-lg font-semibold text-gray-300 mb-4 text-center">Countdown</h4>
-                                <div className="grid grid-cols-4 gap-3">
-                                    <div className="text-center">
-                                        <div className="text-3xl font-bold text-red-500">{countdown.days}</div>
-                                        <div className="text-xs text-gray-400 uppercase">Days</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-3xl font-bold text-red-500">{countdown.hours}</div>
-                                        <div className="text-xs text-gray-400 uppercase">Hours</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-3xl font-bold text-red-500">{countdown.minutes}</div>
-                                        <div className="text-xs text-gray-400 uppercase">Mins</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-3xl font-bold text-red-500">{countdown.seconds}</div>
-                                        <div className="text-xs text-gray-400 uppercase">Secs</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Championship Leaders Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Driver Championship Leader */}
-                {driverStandings.length > 0 && (
-                    <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
-                        <div className="p-4 bg-gray-900/50">
-                            <h3 className="text-lg font-bold text-white flex items-center">
-                                <UsersIcon /> Driver Championship Leader
-                            </h3>
-                        </div>
-                        <div className="p-6">
-                            <div className="flex items-center mb-4 transition-all duration-200 hover:shadow-lg rounded-lg"
-                                style={{
-                                    backgroundColor: `${getTeamColor(driverStandings[0].Constructors[0]?.constructorId)}15`,
-                                    borderLeft: `4px solid ${getTeamColor(driverStandings[0].Constructors[0]?.constructorId)}`
-                                }}>
-                                <div className="p-3 flex items-center flex-1 gap-4">
-                                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-900 flex-shrink-0"
-                                        style={{ borderColor: getTeamColor(driverStandings[0].Constructors[0]?.constructorId) }}>
-                                        <img
-                                            src={getDriverHeadshotUrl(driverStandings[0].Driver)}
-                                            alt={driverStandings[0].Driver.familyName}
-                                            className="w-full h-full object-contain"
-                                            onError={(e) => handleDriverImageError(e, driverStandings[0].Driver, getTeamColor(driverStandings[0].Constructors[0]?.constructorId))}
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="text-2xl font-bold text-white">
-                                            {driverStandings[0].Driver.givenName} {driverStandings[0].Driver.familyName}
-                                        </div>
-                                        <div className="text-md text-gray-400">{driverStandings[0].Constructors[0]?.name}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-3xl font-bold text-red-500">{driverStandings[0].points}</div>
-                                        <div className="text-xs text-gray-400">POINTS</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 text-center">
-                                <div className="bg-gray-900/50 p-3 rounded">
-                                    <div className="text-xl font-bold text-yellow-400">{driverStandings[0].wins}</div>
-                                    <div className="text-xs text-gray-400">Wins</div>
-                                </div>
-                                <div className="bg-gray-900/50 p-3 rounded">
-                                    <div className="text-xl font-bold text-gray-300">
-                                        {driverStandings[1] ? parseInt(driverStandings[0].points) - parseInt(driverStandings[1].points) : 0}
-                                    </div>
-                                    <div className="text-xs text-gray-400">Lead</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Constructor Championship Leader */}
-                {constructorStandings.length > 0 && (
-                    <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
-                        <div className="p-4 bg-gray-900/50">
-                            <h3 className="text-lg font-bold text-white flex items-center">
-                                <TrophyIcon /> Constructor Championship Leader
-                            </h3>
-                        </div>
-                        <div className="p-6">
-                            <div className="flex items-center mb-4 transition-all duration-200 hover:shadow-lg rounded-lg"
-                                style={{
-                                    backgroundColor: `${getTeamColor(constructorStandings[0].Constructor.constructorId)}15`,
-                                    borderLeft: `4px solid ${getTeamColor(constructorStandings[0].Constructor.constructorId)}`
-                                }}>
-                                <div className="p-3 flex items-center flex-1 gap-4">
-                                    <div className="w-16 h-16 rounded-full flex items-center justify-center p-3 flex-shrink-0"
-                                        style={{ backgroundColor: getTeamColor(constructorStandings[0].Constructor.constructorId) }}>
-                                        {getTeamLogoUrl(constructorStandings[0].Constructor.constructorId) ? (
-                                            <img
-                                                src={getTeamLogoUrl(constructorStandings[0].Constructor.constructorId)}
-                                                alt={constructorStandings[0].Constructor.name}
-                                                className="w-full h-full object-contain"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                    e.target.parentElement.innerHTML = `<span class="text-sm font-bold text-white">${constructorStandings[0].Constructor.name.slice(0, 3).toUpperCase()}</span>`;
-                                                }}
-                                            />
-                                        ) : (
-                                            <span className="text-sm font-bold text-white">
-                                                {constructorStandings[0].Constructor.name.slice(0, 3).toUpperCase()}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="text-2xl font-bold text-white">{constructorStandings[0].Constructor.name}</div>
-                                        <div className="text-md text-gray-400 flex items-center gap-2">
-                                            <span className="text-lg">{getNationalityFlag(normalizeNationality(constructorStandings[0].Constructor.nationality))}</span>
-                                            {constructorStandings[0].Constructor.nationality}
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-3xl font-bold text-red-500">{constructorStandings[0].points}</div>
-                                        <div className="text-xs text-gray-400">POINTS</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 text-center">
-                                <div className="bg-gray-900/50 p-3 rounded">
-                                    <div className="text-xl font-bold text-yellow-400">{constructorStandings[0].wins}</div>
-                                    <div className="text-xs text-gray-400">Wins</div>
-                                </div>
-                                <div className="bg-gray-900/50 p-3 rounded">
-                                    <div className="text-xl font-bold text-gray-300">
-                                        {constructorStandings[1] ? parseInt(constructorStandings[0].points) - parseInt(constructorStandings[1].points) : 0}
-                                    </div>
-                                    <div className="text-xs text-gray-400">Lead</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Last Race Results Summary */}
-            {lastRace && (
-                <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
-                    <div className="p-4 bg-gray-900/50">
-                        <h3 className="text-lg font-bold text-white flex items-center">
-                            <FlagIcon /> Last Race - {lastRace.raceName}
-                        </h3>
-                    </div>
-                    <div className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {lastRace.Results?.slice(0, 3).map((result, index) => {
-                                const teamColor = getTeamColor(result.Constructor.constructorId);
-                                return (
-                                    <div
-                                        key={result.position}
-                                        className="transition-all duration-200 hover:shadow-lg"
-                                        style={{
-                                            backgroundColor: `${teamColor}15`,
-                                            borderLeft: `4px solid ${teamColor}`
-                                        }}
-                                    >
-                                        <div className="p-4 flex items-center justify-between">
-                                            <div className="flex items-center flex-1">
-                                                <div className={`text-4xl font-bold mr-3 ${
-                                                    index === 0 ? 'text-yellow-400' :
-                                                    index === 1 ? 'text-gray-300' :
-                                                    'text-orange-400'
-                                                }`}>
-                                                    {result.position}
-                                                </div>
-                                                <div className="flex-1 ml-3">
-                                                    <div className="text-lg font-bold text-white">
-                                                        {result.Driver.givenName} {result.Driver.familyName}
-                                                    </div>
-                                                    <div className="text-sm text-gray-400">{result.Constructor.name}</div>
-                                                </div>
-                                            </div>
-                                            <img
-                                                src={getTeamLogoUrl(result.Constructor.constructorId)}
-                                                alt={result.Constructor.name}
-                                                className="w-14 h-14 ml-3 rounded opacity-90 object-contain"
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Top 5 Drivers */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
-                    <div className="p-4 bg-gray-900/50">
-                        <h3 className="text-lg font-bold text-white">Top 5 Drivers</h3>
-                    </div>
-                    <div className="p-4">
-                        <div className="space-y-2">
-                            {driverStandings.slice(0, 5).map((standing, index) => {
-                                const teamColor = getTeamColor(standing.Constructors[0]?.constructorId);
-                                return (
-                                    <div key={standing.position}
-                                        className="flex items-center p-3 transition-all duration-200 hover:shadow-lg rounded"
-                                        style={{
-                                            backgroundColor: `${teamColor}15`,
-                                            borderLeft: `4px solid ${teamColor}`
-                                        }}>
-                                        <div className="w-8 text-center font-bold text-gray-400">{index + 1}</div>
-                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-900 mx-3"
-                                            style={{ borderColor: teamColor }}>
-                                            <img
-                                                src={getDriverHeadshotUrl(standing.Driver)}
-                                                alt={standing.Driver.familyName}
-                                                className="w-full h-full object-contain"
-                                                onError={(e) => handleDriverImageError(e, standing.Driver, getTeamColor(standing.Constructors[0]?.constructorId))}
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="text-sm font-semibold text-white">
-                                                {standing.Driver.givenName} {standing.Driver.familyName}
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-sm font-bold text-white">{standing.points}</div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Top 5 Constructors */}
-                <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
-                    <div className="p-4 bg-gray-900/50">
-                        <h3 className="text-lg font-bold text-white">Top 5 Constructors</h3>
-                    </div>
-                    <div className="p-4">
-                        <div className="space-y-2">
-                            {constructorStandings.slice(0, 5).map((standing, index) => {
-                                const teamColor = getTeamColor(standing.Constructor.constructorId);
-                                return (
-                                    <div key={standing.position}
-                                        className="flex items-center p-3 transition-all duration-200 hover:shadow-lg rounded"
-                                        style={{
-                                            backgroundColor: `${teamColor}15`,
-                                            borderLeft: `4px solid ${teamColor}`
-                                        }}>
-                                        <div className="w-8 text-center font-bold text-gray-400">{index + 1}</div>
-                                        <div className="w-10 h-10 rounded-full flex items-center justify-center p-2 mx-3"
-                                            style={{ backgroundColor: teamColor }}>
-                                            {getTeamLogoUrl(standing.Constructor.constructorId) ? (
-                                                <img
-                                                    src={getTeamLogoUrl(standing.Constructor.constructorId)}
-                                                    alt={standing.Constructor.name}
-                                                    className="w-full h-full object-contain"
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        e.target.parentElement.innerHTML = `<span class="text-xs font-bold text-white">${standing.Constructor.name.slice(0, 3).toUpperCase()}</span>`;
-                                                    }}
-                                                />
-                                            ) : (
-                                                <span className="text-xs font-bold text-white">
-                                                    {standing.Constructor.name.slice(0, 3).toUpperCase()}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="text-sm font-semibold text-white">{standing.Constructor.name}</div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-sm font-bold text-white">{standing.points}</div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Enhanced Driver Standings Component with Multi-Year Tabs
-const DriverStandingsCard = ({ standings, loading }) => {
-    const [selectedYear, setSelectedYear] = useState(2025);
-    const [yearStandings, setYearStandings] = useState({});
-    const [loadingYear, setLoadingYear] = useState(false);
-    const [expandedDriver, setExpandedDriver] = useState(null);
-    // cache summaries by driverId: { loading: bool, text: string|null, wikiUrl: string|null }
-    const [driverSummaries, setDriverSummaries] = useState({});
-
-    const years = [2025, 2024, 2023];
-
-    // When a driver is expanded, fetch a short summary (Wikipedia) if we don't have it cached
-    useEffect(() => {
-        let mounted = true;
-        const loadSummary = async () => {
-            if (!expandedDriver) return;
-
-            // Find driver entry for the expanded driver id in currentStandings
-            const driverEntry = currentStandings.find(s => s.Driver.driverId === expandedDriver);
-            if (!driverEntry) return;
-
-            const id = driverEntry.Driver.driverId;
-            if (driverSummaries[id]) return; // already cached
-
-            // mark loading
-            setDriverSummaries(prev => ({ ...prev, [id]: { loading: true, text: null, wikiUrl: null } }));
-
-            try {
-                let summary = null;
-                let wikiUrl = null;
-
-                // Prefer Ergast-provided wiki url then fetch the summary if possible
-                if (ErgastAPI.getDriverWikiUrlById) {
-                    try {
-                        wikiUrl = await ErgastAPI.getDriverWikiUrlById(driverEntry.Driver.driverId, selectedYear || 'current');
-                        if (wikiUrl) {
-                            // fetch summary via REST API using title from wikiUrl
-                            const parts = wikiUrl.split('/');
-                            const title = decodeURIComponent(parts[parts.length - 1]);
-                            const wikiApi = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-                            const res = await fetch(wikiApi);
-                            if (res.ok) {
-                                const data = await res.json();
-                                summary = data.extract || null;
-                            }
-                        }
-                    } catch (err) {
-                        console.warn('Error fetching summary from Ergast-provided wiki url', err);
-                        wikiUrl = null;
-                    }
-                }
-
-                // Fallback to getDriverSummaryById helper (which tries Ergast list + wiki REST) or name-based lookup
-                if (!summary && ErgastAPI.getDriverSummaryById) {
-                    try {
-                        summary = await ErgastAPI.getDriverSummaryById(driverEntry.Driver.driverId, selectedYear || 'current');
-                    } catch (err) {
-                        console.warn('Error in getDriverSummaryById', err);
-                    }
-                }
-
-                if (!summary && ErgastAPI.getDriverSummary) {
-                    try {
-                        summary = await ErgastAPI.getDriverSummary(driverEntry.Driver.givenName, driverEntry.Driver.familyName);
-                        if (summary && !wikiUrl && ErgastAPI.buildWikiUrlForName) {
-                            wikiUrl = ErgastAPI.buildWikiUrlForName(driverEntry.Driver.givenName, driverEntry.Driver.familyName);
-                        }
-                    } catch (err) {
-                        console.warn('Error fetching name-based driver summary', err);
-                    }
-                }
-
-                if (!mounted) return;
-                setDriverSummaries(prev => ({ ...prev, [id]: { loading: false, text: summary || null, wikiUrl: wikiUrl || null } }));
-            } catch (err) {
-                console.warn('Error fetching driver summary', err);
-                if (mounted) setDriverSummaries(prev => ({ ...prev, [id]: { loading: false, text: null, wikiUrl: null } }));
-            }
-        };
-
-        loadSummary();
-
-        return () => { mounted = false; };
-    }, [expandedDriver]);
-
-    // Load standings for a specific year
-    useEffect(() => {
-        if (!yearStandings[selectedYear]) {
-            setLoadingYear(true);
-            ErgastAPI.getDriverStandings(selectedYear)
-                .then(data => {
-                    setYearStandings(prev => ({ ...prev, [selectedYear]: data }));
-                    setLoadingYear(false);
-                })
-                .catch(err => {
-                    console.error(`Error fetching ${selectedYear} standings:`, err);
-                    setLoadingYear(false);
-                });
-        }
-    }, [selectedYear, yearStandings]);
-
-    // Initialize current year standings from props
-    useEffect(() => {
-        if (standings && standings.length > 0 && !yearStandings[2025]) {
-            setYearStandings(prev => ({ ...prev, 2025: standings }));
-        }
-    }, [standings, yearStandings]);
-
-    const currentStandings = yearStandings[selectedYear] || [];
-    const isLoading = loading || loadingYear;
-
-    if (isLoading && currentStandings.length === 0) {
-        return <div className="text-center p-8 text-gray-300">Loading driver standings...</div>;
-    }
-
-    return (
-        <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
-            <div className="p-4 sm:p-6">
-                <h2 className="text-xl font-bold text-white flex items-center mb-4">
-                    <UsersIcon /> Driver Championship
-                </h2>
-
-                {/* Year Tabs */}
-                <div className="flex gap-2 mb-4">
-                    {years.map(year => (
-                        <button
-                            key={year}
-                            onClick={() => setSelectedYear(year)}
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                                selectedYear === year
-                                    ? 'bg-red-600 text-white shadow-lg'
-                                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
-                            }`}
-                        >
-                            {year}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Mobile-friendly compact view */}
-            <div className="block sm:hidden space-y-3 px-4 pb-4">
-                {currentStandings.map((standing) => {
-                    const teamColor = getTeamColor(standing.Constructors[0]?.constructorId);
-                    const isExpanded = expandedDriver === standing.Driver.driverId;
-                    const summaryObj = driverSummaries[standing.Driver.driverId] || { loading: false, text: null, wikiUrl: null };
-
-                    return (
-                        <div
-                            key={standing.position}
-                            className="rounded-lg overflow-hidden transition-all duration-200"
-                            style={{
-                                backgroundColor: `${teamColor}15`,
-                                borderLeft: `4px solid ${teamColor}`
-                            }}
-                        >
-                            <div
-                                className="p-3 cursor-pointer"
-                                onClick={() => setExpandedDriver(isExpanded ? null : standing.Driver.driverId)}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="text-2xl font-bold text-white w-8 text-center">{standing.position}</div>
-                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-900">
-                                        <img
-                                            src={getDriverHeadshotUrl(standing.Driver)}
-                                            alt={standing.Driver.familyName}
-                                            className="w-full h-full object-contain"
-                                            onError={(e) => handleDriverImageError(e, standing.Driver, getTeamColor(standing.Constructors[0]?.constructorId))}
-                                        />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-bold text-white truncate">
-                                            {standing.Driver.givenName} {standing.Driver.familyName}
-                                        </div>
-                                        <div className="text-xs text-gray-400 flex items-center gap-1">
-                                            #{standing.Driver.permanentNumber}&nbsp; <span className="text-base">{getNationalityFlag(normalizeNationality(standing.Driver.nationality))}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 truncate">{standing.Constructors[0]?.name}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-xl font-bold text-white">{standing.points}</div>
-                                        <div className="text-xs text-yellow-400">{standing.wins} wins</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Expanded Info for Mobile */}
-                            {isExpanded && (
-                                <div className="px-3 pb-3 border-t border-gray-700/50">
-                                    <div className="mt-3 space-y-3">
-                                        {/* Team Info */}
-                                        <div className="flex items-center gap-2 p-2 bg-gray-900/30 rounded">
-                                            <div
-                                                className="w-6 h-6 rounded-full flex items-center justify-center p-1"
-                                                style={{ backgroundColor: teamColor }}
-                                            >
-                                                {getTeamLogoUrl(standing.Constructors[0]?.constructorId) ? (
-                                                    <img
-                                                        src={getTeamLogoUrl(standing.Constructors[0]?.constructorId)}
-                                                        alt={standing.Constructors[0]?.name}
-                                                        className="w-full h-full object-contain"
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none';
-                                                            e.target.parentElement.innerHTML = `<span class="text-xs font-bold text-white">${standing.Constructors[0]?.name.slice(0, 3).toUpperCase()}</span>`;
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <span className="text-xs font-bold text-white">
-                                                        {standing.Constructors[0]?.name.slice(0, 3).toUpperCase()}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <span className="text-sm text-gray-300">{standing.Constructors[0]?.name}</span>
-                                        </div>
-
-                                        {/* Stats */}
-                                        <div className="grid grid-cols-3 gap-2 text-center">
-                                            <div className="p-2 bg-gray-900/30 rounded">
-                                                <div className="text-xs text-gray-400">Wins</div>
-                                                <div className="text-sm font-bold text-yellow-400">{standing.wins}</div>
-                                            </div>
-                                            <div className="p-2 bg-gray-900/30 rounded">
-                                                <div className="text-xs text-gray-400">Podiums</div>
-                                                <div className="text-sm font-bold text-gray-300">
-                                                    {parseInt(standing.wins) + (standing.podiums ? parseInt(standing.podiums) - parseInt(standing.wins) : 0)}
-                                                </div>
-                                            </div>
-                                            <div className="p-2 bg-gray-900/30 rounded">
-                                                <div className="text-xs text-gray-400">Points</div>
-                                                <div className="text-sm font-bold text-white">{standing.points}</div>
-                                            </div>
-                                        </div>
-
-                                        {/* About Section */}
-                                        <div className="mt-3 space-y-2">
-                                            <h4 className="text-xs font-semibold text-gray-400 uppercase">About</h4>
-                                            {summaryObj.loading ? (
-                                                <p className="text-sm text-gray-400">Loading bio...</p>
-                                            ) : (
-                                                <>
-                                                    {summaryObj.text && (
-                                                        <p className="text-xs text-gray-300 leading-relaxed">{summaryObj.text}</p>
-                                                    )}
-                                                    {!summaryObj.text && (
-                                                        <p className="text-xs text-gray-400 italic">
-                                                            {standing.Driver.givenName} {standing.Driver.familyName} is a {standing.Driver.nationality} racing driver competing in Formula 1 for {standing.Constructors[0]?.name}.
-                                                        </p>
-                                                    )}
-                                                    {summaryObj.wikiUrl && (
-                                                        <a
-                                                            href={summaryObj.wikiUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-xs text-blue-400 hover:text-blue-300 hover:underline inline-block mt-1"
-                                                        >
-                                                            Read on Wikipedia 
-                                                        </a>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
-
-                                        {/* Performance Charts */}
-                                        <DriverIndividualCharts
-                                            driver={standing.Driver}
-                                            currentYear={selectedYear}
-                                            teamColor={teamColor}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Desktop table view */}
-            <div className="hidden sm:block overflow-x-auto">
-                <table className="min-w-full">
-                    <thead className="bg-gray-900/70">
-                        <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Pos</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Driver</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Team</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase">Wins</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase hidden md:table-cell">Podiums</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">Points</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">Info</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {currentStandings.map((standing) => {
-                            const teamColor = getTeamColor(standing.Constructors[0]?.constructorId);
-                            const isExpanded = expandedDriver === standing.Driver.driverId;
-                            const summaryObj = driverSummaries[standing.Driver.driverId] || { loading: false, text: null, wikiUrl: null };
-
-                            return (
-                                <React.Fragment key={standing.position}>
-                                    <tr
-                                        className="transition-all duration-200 border-b border-gray-700/50 hover:shadow-lg cursor-pointer"
-                                        style={{
-                                            backgroundColor: `${teamColor}15`,
-                                            borderLeft: `4px solid ${teamColor}`
-                                        }}
-                                        onClick={() => setExpandedDriver(isExpanded ? null : standing.Driver.driverId)}
-                                    >
-                                        <td className="px-4 py-4 whitespace-nowrap">
-                                            <div className="text-xl font-bold text-white">{standing.position}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-900"
-                                                    style={{ borderColor: teamColor }}>
-                                                <img
-    src={getDriverHeadshotUrl(standing.Driver)}
-    alt={standing.Driver.familyName}
-    className="w-full h-full object-contain"
-    onError={(e) => handleDriverImageError(e, standing.Driver, getTeamColor(standing.Constructors[0]?.constructorId))}
-/>
-
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-bold text-white">
-                                                        {standing.Driver.givenName} {standing.Driver.familyName}
-                                                    </div>
-                                                    <div className="text-xs text-gray-400 flex items-center gap-1">
-                                                        #{standing.Driver.permanentNumber}&nbsp; <span className="text-base">{getNationalityFlag(normalizeNationality(standing.Driver.nationality))}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-2">
-                                             {/* Team Logo with circular colored background */}
-<div
-    className="w-8 h-8 rounded-full flex items-center justify-center p-1.5"
-    style={{ backgroundColor: getTeamColor(standing.Constructors[0]?.constructorId) }}
->
-    {getTeamLogoUrl(standing.Constructors[0]?.constructorId) ? (
-        <img
-            src={getTeamLogoUrl(standing.Constructors[0]?.constructorId)}
-            alt={standing.Constructors[0]?.name}
-            className="w-full h-full object-contain"
-            onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = `<span class="text-xs font-bold text-white">${standing.Constructors[0]?.name.slice(0, 3).toUpperCase()}</span>`;
-            }}
-        />
-    ) : (
-        <span className="text-xs font-bold text-white">
-            {standing.Constructors[0]?.name.slice(0, 3).toUpperCase()}
-        </span>
-    )}
-</div>
-
-
-                                                <span className="text-sm text-gray-300">{standing.Constructors[0]?.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4 whitespace-nowrap text-right">
-                                            <div className="text-sm font-bold text-yellow-400">{standing.wins}</div>
-                                        </td>
-                                        <td className="px-4 py-4 whitespace-nowrap text-right hidden md:table-cell">
-                                            <div className="text-sm text-gray-300">
-                                                {parseInt(standing.wins) + (standing.podiums ? parseInt(standing.podiums) - parseInt(standing.wins) : 0)}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            <div className="text-lg font-bold text-white">{standing.points}</div>
-                                        </td>
-                                        <td className="px-4 py-4 whitespace-nowrap text-center">
-                                            <button className="text-gray-400 hover:text-white transition-colors">
-                                                <ChevronDownIcon />
-                                            </button>
-                                        </td>
-                                    </tr>
-
-                                    {/* Expanded Driver Details */}
-                                    {isExpanded && (
-                                        <tr style={{ backgroundColor: `${teamColor}08` }}>
-                                            <td colSpan="7" className="px-2 py-2 sm:px-6 sm:py-6">
-                                                <div className="mb-6 flex flex-col md:flex-row gap-6 items-start ">
-                                                    {/* Large Driver Photo */}
-                                                    <div className="w-full md:w-48 flex-shrink-0">
-                                                        <div className="relative rounded-lg overflow-hidden bg-gray-900">
-{/* F1 Style Driver Photo with Number Background */}
-<div className="relative w-48 h-[400px] rounded-lg overflow-hidden" style={{ backgroundColor: teamColor }}>
-    
-    {/* Large Driver Number Background (masked) - F1 Style */}
-    <div 
-        className="absolute inset-0 flex items-center justify-center opacity-30 z-0"
-        style={{
-            backgroundColor: 'white',
-            maskImage: `url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='160' font-weight='900' font-family='Arial Black, sans-serif' font-style='italic' letter-spacing='-8' fill='white'>${standing.Driver.permanentNumber}</text></svg>")`,
-            maskSize: 'contain',
-            maskRepeat: 'no-repeat',
-            maskPosition: 'center',
-            WebkitMaskImage: `url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='160' font-weight='900' font-family='Arial Black, sans-serif' font-style='italic' letter-spacing='-8' fill='white'>${standing.Driver.permanentNumber}</text></svg>")`,
-            WebkitMaskSize: 'contain',
-            WebkitMaskRepeat: 'no-repeat',
-            WebkitMaskPosition: 'center'
-        }}
-    />
-    
-    {/* Driver Photo - fills frame (will scale to fit) */}
-    <img
-        src={getDriverCloudinaryUrl(standing.Driver.code, 720) || getDriverHeadshotUrl(standing.Driver)}
-        alt={`${standing.Driver.givenName} ${standing.Driver.familyName}`}
-        className="absolute inset-0 w-full h-full object-cover object-top z-5"
-        onError={(e) => {
-            const attempt = parseInt(e.target.getAttribute('data-fallback-attempt') || '0');
-
-            if (attempt === 0) {
-                // Try 2024 as fallback
-                e.target.setAttribute('data-fallback-attempt', '1');
-                const familyName = standing.Driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
-                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
-            } else if (attempt === 1) {
-                // Try 2023 as fallback (for older drivers like de Vries)
-                e.target.setAttribute('data-fallback-attempt', '2');
-                const familyName = standing.Driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
-                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2023Drivers/${familyName}.png.transform/2col/image.png`;
-            } else {
-                // Hide if all fallbacks fail
-                e.target.style.display = 'none';
-            }
-        }}
-    />
-    
-    {/* Gradient overlay */}
-    <div 
-        className="absolute inset-0 z-10 pointer-events-none"
-        style={{
-            background: `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.3) 70%, ${teamColor} 100%)`
-        }}
-    />
-    
-</div>
-
-
-                                                        </div>                                                        
-                                                    </div>
-
-{/* Driver Bio */}
-<div className="flex flex-col flex-1 self-stretch">
-    
-    {/* Top row: Name/Number and Logo */}
-    <div className="flex items-center justify-between mb-4">
-        <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-            <span>
-                {standing.Driver.givenName} {standing.Driver.familyName}
-            </span>
-            <span 
-                className="px-3 py-1 rounded-full text-xs font-semibold"
-                style={{ backgroundColor: `${teamColor}30`, color: teamColor }}
-            >
-                #{standing.Driver.permanentNumber}
-            </span>
-        </h3>
-
-        {/* Team Logo aligned right */}
-        <div className="rounded-lg p-3 flex items-center justify-center" style={{ minWidth: '160px', minHeight: '80px' }}>
-            {getTeamLogoUrl(standing.Constructors[0]?.constructorId) && (
-                <img 
-                    src={getTeamLogoUrl(standing.Constructors[0]?.constructorId)}
-                    alt={standing.Constructors[0]?.name}
-                    className="object-contain"
-                    style={{ maxHeight: '60px', maxWidth: '140px', width: 'auto', height: 'auto' }}
-                    onError={(e) => { e.target.style.display = 'none'; }}
-                />
-            )}
-        </div>
-    </div>
-    
-    {/* About section - grows to fill all remaining space */}
-    <div className="bg-gray-900/50 p-4 rounded-lg flex-1">
-        <h4 className="text-sm font-bold uppercase text-gray-200 mb-3 pb-2 border-b border-gray-600">About</h4>
-
-        {/* Compute a reliable fallback bio */}
-        {(() => {
-            const id = standing.Driver.driverId;
-            const given = standing.Driver.givenName;
-            const family = standing.Driver.familyName;
-            const nationality = standing.Driver.nationality;
-            const teamName = standing.Constructors[0]?.name || '';
-            const fallbackBio = `${given} ${family} is a ${nationality} racing driver competing in Formula 1 for ${teamName}. ${standing.wins > 0 ? `With ${standing.wins} race win${parseInt(standing.wins) !== 1 ? 's' : ''} this season, ` : ''}Currently holds P${standing.position} in the championship with ${standing.points} points.`;
-
-            const bioText = summaryObj.text || fallbackBio;
-
-            return (
-                <div>
-                    {summaryObj.loading && (
-                        <div className="italic text-gray-400 mb-2">Loading biography...</div>
-                    )}
-
-                    <p className="text-sm text-gray-300 leading-relaxed">{bioText}</p>
-
-                    {summaryObj.wikiUrl && (
-                        <p className="mt-2 text-xs text-gray-400">
-                            <a href={summaryObj.wikiUrl} target="_blank" rel="noreferrer" className="underline hover:text-white">Read on Wikipedia</a>
-                        </p>
-                    )}
-                </div>
-            );
-        })()}
-    </div>
-
-</div>
-
-
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div className="bg-gray-900/50 p-4 rounded-lg">
-                                                        <h4 className="text-sm font-bold uppercase text-gray-200 mb-3 pb-2 border-b border-gray-600">Career Stats</h4>
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between">
-                                                                <span className="text-sm text-gray-400">DOB</span>
-                                                                <span className="text-sm font-semibold text-white">
-                                                                    {standing.Driver.dateOfBirth || 'N/A'}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex justify-between items-center">
-                                                                <span className="text-sm text-gray-400">Nationality</span>
-                                                                <span className="px-3 py-1 rounded-full text-lg font-semibold flex items-center gap-2"
-                                                                style={{ backgroundColor: `${teamColor}30`, color: teamColor }}>
-                                                                {getNationalityFlag(normalizeNationality(standing.Driver.nationality))}
-                                                                <span className="text-xs">{standing.Driver.nationality}</span>
-                                                            </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="bg-gray-900/50 p-4 rounded-lg">
-                                                        <h4 className="text-sm font-bold uppercase text-gray-200 mb-3 pb-2 border-b border-gray-600">Season {selectedYear}</h4>
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between">
-                                                                <span className="text-sm text-gray-400">Position</span>
-                                                                <span className="text-sm font-semibold text-white">P{standing.position}</span>
-                                                            </div>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-sm text-gray-400">Wins</span>
-                                                                <span className="text-sm font-semibold text-yellow-400">{standing.wins}</span>
-                                                            </div>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-sm text-gray-400">Points</span>
-                                                                <span className="text-sm font-semibold text-white">{standing.points}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="bg-gray-900/50 p-4 rounded-lg">
-                                                        <h4 className="text-sm font-bold uppercase text-gray-200 mb-3 pb-2 border-b border-gray-600">Team Info</h4>
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between">
-                                                                <span className="text-sm text-gray-400">Constructor</span>
-                                                                <span className="text-sm font-semibold text-white">
-                                                                    {standing.Constructors[0]?.name}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex justify-between items-center">
-                                                                <span className="text-sm text-gray-400">Nationality</span>
-                                                                <span className="text-sm font-semibold text-white flex items-center gap-2">
-                                                                    <span className="text-lg">{getNationalityFlag(normalizeNationality(standing.Constructors[0]?.nationality))}</span>
-                                                                    {standing.Constructors[0]?.nationality}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Driver Performance Charts */}
-                                                <DriverIndividualCharts driver={standing.Driver} currentYear={selectedYear} teamColor={teamColor} />
-                                            </td>
-                                        </tr>
-                                    )}
-                                </React.Fragment>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-};
-
-// Driver Individual Charts Component (for expander)
-const DriverIndividualCharts = ({ driver, currentYear, teamColor }) => {
-    const [comparisonData, setComparisonData] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchDriverComparison = async () => {
-            try {
-                const [currentStandings, previousStandings] = await Promise.all([
-                    ErgastAPI.getDriverStandings(currentYear),
-                    ErgastAPI.getDriverStandings(currentYear - 1)
-                ]);
-
-                const currentDriver = currentStandings.find(d => d.Driver.driverId === driver.driverId);
-                const previousDriver = previousStandings.find(d => d.Driver.driverId === driver.driverId);
-
-                setComparisonData({
-                    current: {
-                        wins: parseInt(currentDriver?.wins) || 0,
-                        points: parseInt(currentDriver?.points) || 0,
-                        position: parseInt(currentDriver?.position) || 0
-                    },
-                    previous: {
-                        wins: parseInt(previousDriver?.wins) || 0,
-                        points: parseInt(previousDriver?.points) || 0,
-                        position: parseInt(previousDriver?.position) || 0
-                    }
-                });
-            } catch (error) {
-                console.error('Error fetching driver comparison:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchDriverComparison();
-    }, [driver.driverId, currentYear]);
-
-    if (loading) {
-        return <div className="text-gray-400 text-center py-4">Loading performance data...</div>;
-    }
-
-    if (!comparisonData) {
-        return null;
-    }
-
-    const winsChartData = {
-        labels: [`${currentYear - 1}`, `${currentYear}`],
-        datasets: [
-            {
-                label: 'Race Wins',
-                data: [comparisonData.previous.wins, comparisonData.current.wins],
-                backgroundColor: [teamColor + '80', teamColor],
-                borderColor: teamColor,
-                borderWidth: 2
-            }
-        ]
-    };
-
-    const pointsChartData = {
-        labels: [`${currentYear - 1}`, `${currentYear}`],
-        datasets: [
-            {
-                label: 'Points',
-                data: [comparisonData.previous.points, comparisonData.current.points],
-                backgroundColor: [teamColor + '80', teamColor],
-                borderColor: teamColor,
-                borderWidth: 2
-            }
-        ]
-    };
-
-    const chartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: {
-            legend: {
-                display: false
-            },
-            tooltip: {
-                backgroundColor: 'rgba(17, 24, 39, 0.9)',
-                titleColor: '#fff',
-                bodyColor: '#d1d5db'
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    color: '#9ca3af',
-                    font: { size: 10 }
-                },
-                grid: { color: 'rgba(75, 85, 99, 0.2)' }
-            },
-            x: {
-                ticks: {
-                    color: '#9ca3af',
-                    font: { size: 10 }
-                },
-                grid: { display: false }
-            }
-        }
-    };
-
-    return (
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Wins Comparison */}
-            <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
-                <h4 className="text-sm font-bold uppercase text-gray-200 mb-3 pb-2 border-b border-gray-600">
-                    Wins Comparison
-                </h4>
-                <div style={{ height: '200px' }}>
-                    <Bar data={winsChartData} options={chartOptions} />
-                </div>
-                <div className="mt-3 text-xs text-gray-400 text-center">
-                    {comparisonData.current.wins > comparisonData.previous.wins ? (
-                        <span className="text-green-400"> +{comparisonData.current.wins - comparisonData.previous.wins} wins vs last year</span>
-                    ) : comparisonData.current.wins < comparisonData.previous.wins ? (
-                        <span className="text-red-400"> {comparisonData.previous.wins - comparisonData.current.wins} fewer wins vs last year</span>
-                    ) : (
-                        <span className="text-gray-400"> Same as last year</span>
-                    )}
-                </div>
-            </div>
-
-            {/* Points Comparison */}
-            <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
-                <h4 className="text-sm font-bold uppercase text-gray-200 mb-3 pb-2 border-b border-gray-600">
-                    Points Comparison
-                </h4>
-                <div style={{ height: '200px' }}>
-                    <Bar data={pointsChartData} options={chartOptions} />
-                </div>
-                <div className="mt-3 text-xs text-gray-400 text-center">
-                    {comparisonData.current.points > comparisonData.previous.points ? (
-                        <span className="text-green-400"> +{comparisonData.current.points - comparisonData.previous.points} points vs last year</span>
-                    ) : comparisonData.current.points < comparisonData.previous.points ? (
-                        <span className="text-red-400"> {comparisonData.previous.points - comparisonData.current.points} fewer points vs last year</span>
-                    ) : (
-                        <span className="text-gray-400"> Same as last year</span>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Constructor Details Expansion Component
-const ConstructorDetails = ({ standing, teamColor }) => {
-    const [drivers, setDrivers] = useState([]);
-    const [yearComparison, setYearComparison] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchTeamData = async () => {
-            try {
-                const [driverStandings, current2025, previous2024] = await Promise.all([
-                    ErgastAPI.getDriverStandings(),
-                    ErgastAPI.getConstructorStandings(2025),
-                    ErgastAPI.getConstructorStandings(2024)
-                ]);
-
-                const teamDrivers = driverStandings.filter(
-                    d => d.Constructors[0]?.constructorId === standing.Constructor.constructorId
-                );
-                setDrivers(teamDrivers);
-
-                // Get year comparison data
-                const team2025 = current2025.find(t => t.Constructor.constructorId === standing.Constructor.constructorId);
-                const team2024 = previous2024.find(t => t.Constructor.constructorId === standing.Constructor.constructorId);
-
-                setYearComparison({
-                    wins2025: parseInt(team2025?.wins || 0),
-                    wins2024: parseInt(team2024?.wins || 0),
-                    points2025: parseInt(team2025?.points || 0),
-                    points2024: parseInt(team2024?.points || 0)
-                });
-            } catch (error) {
-                console.error('Error fetching team data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchTeamData();
-    }, [standing.Constructor.constructorId]);
-
-    if (loading) {
-        return <div className="text-gray-400 text-center py-4">Loading team details...</div>;
-    }
-
-    const winsChartData = yearComparison ? {
-        labels: ['2024', '2025'],
-        datasets: [{
-            label: 'Race Wins',
-            data: [yearComparison.wins2024, yearComparison.wins2025],
-            backgroundColor: [darkenColor(teamColor), teamColor],
-            borderColor: [darkenColor(teamColor), teamColor],
-            borderWidth: 2
-        }]
-    } : null;
-
-    const pointsChartData = yearComparison ? {
-        labels: ['2024', '2025'],
-        datasets: [{
-            label: 'Points',
-            data: [yearComparison.points2024, yearComparison.points2025],
-            backgroundColor: [darkenColor(teamColor), teamColor],
-            borderColor: [darkenColor(teamColor), teamColor],
-            borderWidth: 2
-        }]
-    } : null;
-
-    const chartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(17, 24, 39, 0.9)',
-                titleColor: '#fff',
-                bodyColor: '#d1d5db'
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: { color: '#9ca3af', font: { size: 10 } },
-                grid: { color: 'rgba(75, 85, 99, 0.2)' }
-            },
-            x: {
-                ticks: { color: '#9ca3af', font: { size: 10 } },
-                grid: { display: false }
-            }
-        }
-    };
-
-    return (
-        <div className="space-y-6">
-            {/* Team Summary as main header */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
-                    <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">Season Position</h4>
-                    <div className="text-3xl font-bold" style={{ color: teamColor }}>#{standing.position}</div>
-                </div>
-                <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
-                    <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">Season Points</h4>
-                    <div className="text-3xl font-bold text-white">{standing.points}</div>
-                </div>
-                <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
-                    <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">Grand Prix Wins</h4>
-                    <div className="text-3xl font-bold text-yellow-400">{standing.wins}</div>
-                </div>
-                <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
-                    <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">Nationality</h4>
-                    <div className="flex items-center gap-2 mt-2">
-                        <span className="text-2xl">{getNationalityFlag(normalizeNationality(standing.Constructor.nationality))}</span>
-                        <span className="text-sm font-semibold text-white">{standing.Constructor.nationality}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Year-over-Year Comparison Charts */}
-            {yearComparison && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
-                        <h4 className="text-sm font-bold uppercase text-gray-200 mb-3 pb-2 border-b border-gray-600">
-                            Wins Comparison
-                        </h4>
-                        <div style={{ height: '200px' }}>
-                            <Bar data={winsChartData} options={chartOptions} />
-                        </div>
-                        <div className="mt-3 text-xs text-gray-400 text-center">
-                            {yearComparison.wins2025 > yearComparison.wins2024 ? (
-                                <span className="text-green-400"> +{yearComparison.wins2025 - yearComparison.wins2024} wins vs last year</span>
-                            ) : yearComparison.wins2025 < yearComparison.wins2024 ? (
-                                <span className="text-red-400"> {yearComparison.wins2024 - yearComparison.wins2025} fewer wins vs last year</span>
-                            ) : (
-                                <span className="text-gray-400"> Same as last year</span>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
-                        <h4 className="text-sm font-bold uppercase text-gray-200 mb-3 pb-2 border-b border-gray-600">
-                            Points Comparison
-                        </h4>
-                        <div style={{ height: '200px' }}>
-                            <Bar data={pointsChartData} options={chartOptions} />
-                        </div>
-                        <div className="mt-3 text-xs text-gray-400 text-center">
-                            {yearComparison.points2025 > yearComparison.points2024 ? (
-                                <span className="text-green-400"> +{yearComparison.points2025 - yearComparison.points2024} points vs last year</span>
-                            ) : yearComparison.points2025 < yearComparison.points2024 ? (
-                                <span className="text-red-400"> {yearComparison.points2024 - yearComparison.points2025} fewer points vs last year</span>
-                            ) : (
-                                <span className="text-gray-400"> Same as last year</span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Team Drivers */}
-            <div>
-                <h3 className="text-sm font-bold uppercase text-gray-200 mb-3">Team Drivers</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {drivers.map((driver) => (
-                        <div
-                            key={driver.Driver.driverId}
-                            className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50 hover:border-gray-600 transition-all"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
-                                    <img
-                                        src={getDriverHeadshotUrl(driver.Driver)}
-                                        alt={driver.Driver.familyName}
-                                        className="w-full h-full object-contain"
-                                        onError={(e) => handleDriverImageError(e, driver.Driver, teamColor)}
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <div className="font-bold text-white text-base">
-                                        {driver.Driver.givenName} {driver.Driver.familyName}
-                                    </div>
-                                    <div className="text-xs text-gray-400 flex items-center gap-2 mt-1">
-                                        <span>#{driver.Driver.permanentNumber}</span>
-                                        <span></span>
-                                        <span className="text-base">{getNationalityFlag(normalizeNationality(driver.Driver.nationality))}</span>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-xl font-bold text-white">{driver.points}</div>
-                                    <div className="text-xs text-gray-400">points</div>
-                                    <div className="text-xs text-yellow-400 mt-1">{driver.wins} wins</div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Constructor Standings Component (Full)
-const ConstructorStandingsCard = ({ standings, loading }) => {
-    const [expandedTeam, setExpandedTeam] = useState(null);
-
-    if (loading) return <div className="text-center p-8 text-gray-300">Loading constructor standings...</div>;
-    if (standings.length === 0) return <div className="text-center p-8 text-gray-400">No standings data available</div>;
-
-    const toggleTeam = (teamId) => {
-        setExpandedTeam(prev => (prev === teamId ? null : teamId));
-    };
-
-    return (
-        <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
-            <div className="p-4 sm:p-6">
-                <h2 className="text-xl font-bold text-white flex items-center"><TrophyIcon /> Constructor Championship</h2>
-            </div>
-
-            {/* Mobile-friendly constructor standings */}
-            <div className="sm:hidden space-y-3 px-4 pb-4">
-                {standings.map((standing) => {
-                    const teamColor = getTeamColor(standing.Constructor.constructorId);
-                    const isExpanded = expandedTeam === standing.Constructor.constructorId;
-                    const teamLogoUrl = getTeamLogoUrl(standing.Constructor.constructorId);
-
-                    return (
-                        <div
-                            key={`mobile-${standing.position}`}
-                            className="rounded-lg border border-gray-700/50 bg-gray-900/40 overflow-hidden transition-shadow hover:shadow-lg"
-                            style={{
-                                backgroundColor: `${teamColor}18`,
-                                borderLeft: `4px solid ${teamColor}`
-                            }}
-                        >
-                            <button
-                                type="button"
-                                onClick={() => toggleTeam(standing.Constructor.constructorId)}
-                                className="w-full text-left p-4 flex items-center gap-3"
-                            >
-                                <div className="text-2xl font-bold text-white w-10 text-center">
-                                    {standing.position}
-                                </div>
-                                <div
-                                    className="w-12 h-12 rounded-full flex items-center justify-center p-2 flex-shrink-0"
-                                    style={{ backgroundColor: teamColor }}
-                                >
-                                    {teamLogoUrl ? (
-                                        <img
-                                            src={teamLogoUrl}
-                                            alt={standing.Constructor.name}
-                                            className="w-full h-full object-contain"
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                const fallback = document.createElement('span');
-                                                fallback.className = 'text-xs font-bold text-white';
-                                                fallback.textContent = standing.Constructor.name.slice(0, 3).toUpperCase();
-                                                e.target.parentElement.appendChild(fallback);
-                                            }}
-                                        />
-                                    ) : (
-                                        <span className="text-xs font-bold text-white">
-                                            {standing.Constructor.name.slice(0, 3).toUpperCase()}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-semibold text-white truncate">{standing.Constructor.name}</div>
-                                    <div className="text-xs text-gray-400 flex items-center gap-2 mt-1">
-                                        <span className="text-lg">{getNationalityFlag(normalizeNationality(standing.Constructor.nationality))}</span>
-                                        <span className="truncate">{standing.Constructor.nationality}</span>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-xl font-bold text-white">{standing.points}</div>
-                                    <div className="text-xs text-gray-400">points</div>
-                                    <div className="text-xs text-yellow-400 mt-1">{standing.wins} wins</div>
-                                </div>
-                                <div className={`transform transition-transform duration-300 text-gray-400 ${isExpanded ? 'rotate-180' : ''}`}>
-                                    <ChevronDownIcon />
-                                </div>
-                            </button>
-                            <div className="px-4 pb-4 space-y-3">
-                                <div className="grid grid-cols-2 gap-3 text-xs text-gray-300">
-                                    <div className="flex items-center justify-between bg-gray-900/40 px-3 py-2 rounded-lg">
-                                        <span className="uppercase tracking-wide text-gray-500">Wins</span>
-                                        <span className="font-semibold text-yellow-400">{standing.wins}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between bg-gray-900/40 px-3 py-2 rounded-lg">
-                                        <span className="uppercase tracking-wide text-gray-500">Points</span>
-                                        <span className="font-semibold text-white">{standing.points}</span>
-                                    </div>
-                                </div>
-                                {isExpanded && (
-                                    <div className="border-t border-gray-700/60 pt-3">
-                                        <ConstructorDetails standing={standing} teamColor={teamColor} />
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            <div className="hidden sm:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-700">
-                    <thead className="bg-gray-900/70">
-                        <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Pos</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Team</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase hidden sm:table-cell">Nationality</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase">Wins</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">Points</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">Details</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-gray-800/60 divide-y divide-gray-700">
-                        {standings.map((standing) => {
-                            const teamColor = getTeamColor(standing.Constructor.constructorId);
-                            const isExpanded = expandedTeam === standing.Constructor.constructorId;
-
-                            return (
-                                <React.Fragment key={standing.position}>
-                                    <tr
-                                        className="transition-all duration-200 hover:shadow-lg cursor-pointer"
-                                        style={{
-                                            backgroundColor: `${teamColor}15`,
-                                            borderLeft: `4px solid ${teamColor}`
-                                        }}
-                                        onClick={() => toggleTeam(standing.Constructor.constructorId)}
-                                    >
-                                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-white">{standing.position}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <div className="w-8 h-8 rounded-full flex items-center justify-center p-1.5 mr-3"
-                                                    style={{ backgroundColor: teamColor }}>
-                                                    {getTeamLogoUrl(standing.Constructor.constructorId) ? (
-                                                        <img
-                                                            src={getTeamLogoUrl(standing.Constructor.constructorId)}
-                                                            alt={standing.Constructor.name}
-                                                            className="w-full h-full object-contain"
-                                                            onError={(e) => {
-                                                                e.target.style.display = 'none';
-                                                                const fallback = document.createElement('span');
-                                                                fallback.className = 'text-xs font-bold text-white';
-                                                                fallback.textContent = standing.Constructor.name.slice(0, 3).toUpperCase();
-                                                                e.target.parentElement.appendChild(fallback);
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <span className="text-xs font-bold text-white">
-                                                            {standing.Constructor.name.slice(0, 3).toUpperCase()}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="text-sm font-semibold text-white">{standing.Constructor.name}</div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 hidden sm:table-cell">
-                                            <span className="flex items-center gap-2">
-                                                <span className="text-xl">{getNationalityFlag(normalizeNationality(standing.Constructor.nationality))}</span>
-                                                <span>{standing.Constructor.nationality}</span>
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-yellow-400 font-semibold text-right">{standing.wins}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-white text-right">{standing.points}</td>
-                                        <td className="px-4 py-4 whitespace-nowrap text-center">
-                                            <div className={`transform transition-transform duration-300 inline-block ${isExpanded ? 'rotate-180' : ''}`}>
-                                                <ChevronDownIcon />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {isExpanded && (
-                                        <tr>
-                                            <td colSpan="6" className="px-2 py-2 sm:px-6 sm:py-4" style={{ backgroundColor: `${teamColor}08` }}>
-                                                <ConstructorDetails standing={standing} teamColor={teamColor} />
-                                            </td>
-                                        </tr>
-                                    )}
-                                </React.Fragment>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-};
-
-// Lap Time Chart Component with Driver Filtering
-const LapTimeChart = ({ race }) => {
-    const [lapData, setLapData] = useState([]);
-    const [selectedDrivers, setSelectedDrivers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
-    const [allDrivers, setAllDrivers] = useState([]);
-    const [driverOptions, setDriverOptions] = useState([]);
-    const [searchInput, setSearchInput] = useState('');
-    const [showDropdown, setShowDropdown] = useState(false);
-
-    useEffect(() => {
-        const fetchLapTimes = async () => {
-            if (!race.isPast || !race.results) return;
-
-            setLoading(true);
-
-            const baseDriverEntries = race.results.map(result => ({
-                driver: result.Driver,
-                constructor: result.Constructor,
-                laps: [],
-                hasLapData: false
-            }));
-
-            const entryMap = new Map(baseDriverEntries.map(entry => [entry.driver.driverId, entry]));
-
-            let priorityStandings = [];
-            try {
-                if (typeof ErgastAPI.getDriverStandingsByRound === 'function') {
-                    priorityStandings = await ErgastAPI.getDriverStandingsByRound(race.season, race.round);
-                }
-
-                if ((!priorityStandings || priorityStandings.length === 0) && typeof ErgastAPI.getDriverStandings === 'function') {
-                    priorityStandings = await ErgastAPI.getDriverStandings(race.season);
-                }
-            } catch (err) {
-                console.warn('Failed to load driver standings for prioritisation:', err);
-            }
-
-            const topSeasonDriverIds = (priorityStandings || [])
-                .slice(0, 5)
-                .map(standing => standing?.Driver?.driverId)
-                .filter(Boolean);
-
-            const configuredLimit = Math.max(
-                1,
+        let cancelled = false;
+
+        const autoSelect = (entries) => {
+            const lapEntries = entries.filter(entry => entry.hasLapData);
+            const autoSelectCount = Math.max(
+                0,
                 Math.min(
-                    typeof LAP_TIME_DRIVER_LIMIT === 'number' ? LAP_TIME_DRIVER_LIMIT : 10,
-                    race.results.length
+                    typeof LAP_TIME_AUTO_SELECT_COUNT === 'number'
+                        ? LAP_TIME_AUTO_SELECT_COUNT
+                        : 5,
+                    lapEntries.length
                 )
             );
 
-            const driversToFetchCount = Math.min(
-                baseDriverEntries.length,
-                Math.max(configuredLimit, topSeasonDriverIds.length)
+            setSelectedDrivers(
+                lapEntries.slice(0, autoSelectCount).map(entry => entry.driver.driverId)
             );
+            setLapData(lapEntries);
+        };
 
-            const driversToFetch = [];
-            const includedIds = new Set();
-            const includeEntry = (entry) => {
-                if (!entry || includedIds.has(entry.driver.driverId)) {
+        const fallbackToAPI = async () => {
+            try {
+                const standings = await ErgastAPI.getDriverStandings(race.season);
+
+                if (cancelled) {
                     return;
                 }
-                driversToFetch.push(entry);
-                includedIds.add(entry.driver.driverId);
-            };
 
-            topSeasonDriverIds.forEach(driverId => includeEntry(entryMap.get(driverId)));
-            for (const entry of baseDriverEntries) {
-                if (driversToFetch.length >= driversToFetchCount) break;
-                includeEntry(entry);
-            }
+                const topSeasonIds = (standings || [])
+                    .slice(0, Math.min(5, standings.length))
+                    .map(entry => entry.Driver.driverId);
 
-            setLoadingProgress({ current: 0, total: driversToFetch.length });
+                const raceDriverIds = race.results.map(result => result.Driver.driverId);
+                const combinedIds = Array.from(new Set([...topSeasonIds, ...raceDriverIds]));
 
-            try {
-                for (let i = 0; i < driversToFetch.length; i++) {
-                    const entry = driversToFetch[i];
-                    setLoadingProgress({ current: i + 1, total: driversToFetch.length });
+                const limitCount = Math.max(
+                    1,
+                    typeof LAP_TIME_DRIVER_LIMIT === 'number'
+                        ? Math.min(LAP_TIME_DRIVER_LIMIT, combinedIds.length)
+                        : combinedIds.length
+                );
+                const driverIds = combinedIds.slice(0, limitCount);
 
-                    try {
-                        const laps = await ErgastAPI.getLapTimes(race.season, race.round, entry.driver.driverId);
-                        if (laps && laps.length > 0) {
-                            entry.laps = laps;
-                            entry.hasLapData = true;
-                        }
-                    } catch (err) {
-                        console.warn(`No lap data for ${entry.driver.familyName}`);
-                    }
+                const results = await ErgastAPI.getLapTimesBatch(
+                    race.season,
+                    race.round,
+                    driverIds,
+                    null,
+                    race.results
+                );
 
-                    if (i < driversToFetch.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                    }
+                if (cancelled) {
+                    return;
                 }
 
-                setLapData(baseDriverEntries.filter(entry => entry.hasLapData));
-                setDriverOptions(baseDriverEntries);
-                const driversWithDataIds = baseDriverEntries
-                    .filter(entry => entry.hasLapData)
-                    .map(entry => entry.driver.driverId);
-                setAllDrivers(driversWithDataIds);
+                const standingsLookup = new Map(
+                    (standings || []).map(entry => [entry.Driver.driverId, entry.Driver])
+                );
+                const resultLookup = new Map(
+                    (race.results || []).map(result => [result.Driver.driverId, result])
+                );
 
-                const autoSelect = driversToFetch
-                    .filter(entry => entry.hasLapData)
-                    .slice(0, Math.min(5, driversToFetch.length))
-                    .map(entry => entry.driver.driverId);
-                const fallbackSelection = autoSelect.length > 0 ? autoSelect : driversWithDataIds.slice(0, 1);
-                setSelectedDrivers(fallbackSelection);
-            } catch (err) {
-                console.error('Error fetching lap times:', err);
+                const entries = driverIds.map(driverId => {
+                    const apiResult = results.find(res => res.driverId === driverId) || {};
+                    const laps = Array.isArray(apiResult.laps) ? apiResult.laps : [];
+                    const raceResult = resultLookup.get(driverId);
+
+                    const driverInfo = raceResult?.Driver || standingsLookup.get(driverId) || {
+                        driverId,
+                        givenName: driverId,
+                        familyName: ''
+                    };
+
+                    const constructorInfo =
+                        raceResult?.Constructor ||
+                        (raceResult?.Constructors ? raceResult.Constructors[0] : null) || {
+                            constructorId: driverId,
+                            name: 'Unknown'
+                        };
+
+                    return {
+                        driver: driverInfo,
+                        constructor: constructorInfo,
+                        laps,
+                        hasLapData: laps.length > 0,
+                        lapError: apiResult.error || (laps.length === 0 ? 'no_data' : null)
+                    };
+                });
+
+                if (!cancelled) {
+                    setDriverOptions(entries);
+                    setAllDrivers(entries.map(entry => entry.driver.driverId));
+                    autoSelect(entries);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    console.error('Error fetching lap times from API:', error);
+                    setLapData([]);
+                    setDriverOptions([]);
+                    setSelectedDrivers([]);
+                    setAllDrivers([]);
+                }
             } finally {
-                setLoading(false);
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         };
 
-        fetchLapTimes();
-    }, [race.season, race.round, race.isPast]);
+        const loadFromStatic = async () => {
+            if (!race.isPast || !race.results) {
+                if (!cancelled) {
+                    setLapData([]);
+                    setDriverOptions([]);
+                    setSelectedDrivers([]);
+                    setAllDrivers([]);
+                    setLoading(false);
+                }
+                return;
+            }
 
+            setLoading(true);
+
+            const raceKey = `${race.season}-${String(race.round).padStart(2, '0')}`;
+
+            try {
+                const indexRes = await fetch(`/laps/${raceKey}.json`, { cache: 'force-cache' });
+                if (!indexRes.ok) {
+                    throw new Error(`Static lap index not found for ${raceKey}`);
+                }
+
+                const indexData = await indexRes.json();
+                const driversMeta = indexData?.drivers || [];
+
+                const entries = [];
+
+                for (const meta of driversMeta) {
+                    if (cancelled) break;
+
+                    try {
+                        const driverRes = await fetch(`/laps/${meta.file}`, { cache: 'force-cache' });
+                        if (!driverRes.ok) {
+                            throw new Error(`Missing static lap file ${meta.file}`);
+                        }
+                        const driverData = await driverRes.json();
+                        entries.push({
+                            driver: driverData.driver,
+                            constructor: driverData.constructor,
+                            laps: driverData.laps || [],
+                            hasLapData: (driverData.laps || []).length > 0,
+                            lapError: driverData.lapError || null
+                        });
+                    } catch (err) {
+                        console.warn(`Static lap file error: ${err.message}`);
+                    }
+                }
+
+                if (cancelled) {
+                    return;
+                }
+
+                if (entries.length === 0) {
+                    console.warn(`No static lap data entries for ${raceKey}, falling back to API.`);
+                    await fallbackToAPI();
+                    return;
+                }
+
+                setDriverOptions(entries);
+                setAllDrivers(entries.map(entry => entry.driver.driverId));
+                autoSelect(entries);
+            } catch (error) {
+                console.warn(`Static lap snapshot unavailable: ${error.message}`);
+                await fallbackToAPI();
+                return;
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadFromStatic();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [race.isPast, race.results, race.round, race.season]);
     const toggleDriver = (driverId) => {
         setSelectedDrivers(prev => 
             prev.includes(driverId) 
@@ -1928,28 +382,7 @@ const LapTimeChart = ({ race }) => {
     };
 
     if (loading) {
-        return (
-            <div className="text-gray-400 text-center py-8">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="relative w-16 h-16">
-                        <div className="absolute inset-0 border-4 border-gray-700 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-                    </div>
-                    <div>
-                        <div className="text-white font-semibold mb-1">Loading lap time data...</div>
-                        <div className="text-sm text-gray-500">
-                            {loadingProgress.current} of {loadingProgress.total} drivers
-                        </div>
-                        <div className="w-64 h-2 bg-gray-700 rounded-full mt-2 overflow-hidden">
-                            <div
-                                className="h-full bg-red-500 transition-all duration-300"
-                                style={{ width: `${(loadingProgress.current / loadingProgress.total) * 100}%` }}
-                            ></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+        return <LoadingSpinner message="Loading lap time data..." subtext="Fetching race timing snapshots." />;
     }
 
     if (lapData.length === 0) {
@@ -2065,11 +498,6 @@ const LapTimeChart = ({ race }) => {
     };
 
     const addDriver = (driverId) => {
-        const option = driverOptions.find(d => d.driver.driverId === driverId);
-        if (!option?.hasLapData) {
-            return;
-        }
-
         if (!selectedDrivers.includes(driverId)) {
             setSelectedDrivers([...selectedDrivers, driverId]);
         }
@@ -2094,17 +522,16 @@ const LapTimeChart = ({ race }) => {
         })
         : availableDrivers;
 
-    const driversWithoutData = driverOptions.filter(d => !d.hasLapData);
-    const selectedWithoutData = selectedDriversData.filter(d => !d.hasLapData);
 
     return (
         <div className="mt-6">
             <h4 className="text-md font-semibold text-white mb-3 flex items-center gap-2">
-                <span>📊</span> Lap Time Analysis
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: "#E10600" }} aria-hidden="true">
+                    🏎️
+                </span>
+                <span>Lap Time Analysis</span>
             </h4>
-
-            {/* Tag Picker */}
-            <div className="relative mb-4">
+            <div className="relative">
                 <div className="bg-gray-900/80 border border-gray-600 rounded-lg p-2 focus-within:border-red-500 transition-colors">
                     <div className="flex flex-wrap gap-2">
                         {/* Selected Driver Tags */}
@@ -2128,7 +555,7 @@ const LapTimeChart = ({ race }) => {
                                         />
                                     </div>
                                     <span className="text-sm font-medium text-white">
-                                        {driverData.driver.code || `${driverData.driver.givenName} ${driverData.driver.familyName}`}
+                                        {driverData.driver.givenName} {driverData.driver.familyName}
                                     </span>
                                     {!driverData.hasLapData && (
                                         <span className="text-[10px] uppercase tracking-wide text-yellow-400 bg-yellow-500/10 border border-yellow-500/40 rounded px-1 py-0.5">
@@ -2174,8 +601,7 @@ const LapTimeChart = ({ race }) => {
                                         addDriver(driverData.driver.driverId);
                                         setSearchInput('');
                                     }}
-                                    disabled={!driverData.hasLapData}
-                                    className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left ${driverData.hasLapData ? 'hover:bg-gray-700' : 'opacity-60 cursor-not-allowed'}`}
+                                    className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left hover:bg-gray-700 ${driverData.hasLapData ? '' : 'opacity-75'}`}
                                 >
                                     <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-900 flex-shrink-0 ring-2"
                                         style={{ ringColor: teamColor }}>
@@ -2201,18 +627,6 @@ const LapTimeChart = ({ race }) => {
                     </div>
                 )}
             </div>
-
-            {driversWithoutData.length > 0 && (
-                <p className="mt-2 text-xs text-yellow-400">
-                    Lap time data is not provided by the API for {driversWithoutData.length} drivers. They remain listed but cannot be added to the chart.
-                </p>
-            )}
-
-            {selectedWithoutData.length > 0 && (
-                <div className="mt-2 text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
-                    {selectedWithoutData.length === 1 ? 'Lap data is unavailable for the selected driver.' : 'Lap data is unavailable for some of the selected drivers.'}
-                </div>
-            )}
 
             {/* Chart */}
             {selectedDrivers.length === 0 ? (
@@ -2613,21 +1027,9 @@ const RaceCalendarEnhanced = ({ schedule, loading }) => {
     };
 
     if (loading) {
-        return (
-            <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
-                <div className="p-10 flex flex-col items-center justify-center text-gray-300">
-                    <div className="relative w-16 h-16 mb-4">
-                        <div className="absolute inset-0 border-4 border-gray-700 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-                    </div>
-                    <div className="text-lg font-semibold text-white">Loading race calendar…</div>
-                    <p className="text-sm text-gray-400 mt-2 text-center max-w-xs">
-                        Fetching the latest schedule and results from the Ergast API.
-                    </p>
-                </div>
-            </div>
-        );
+        return <LoadingSpinner message="Loading race calendar..." subtext="Fetching the latest schedule and results from the Ergast API." />;
     }
+
     if (schedule.length === 0) return <div className="text-center p-8 text-gray-400">No races available</div>;
 
     return (

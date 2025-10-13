@@ -1,0 +1,21 @@
+{
+  "season": "2025",
+  "round": "20",
+  "raceName": "Mexico City Grand Prix",
+  "driver": {
+    "driverId": "piastri",
+    "permanentNumber": "81",
+    "code": "PIA",
+    "url": "http://en.wikipedia.org/wiki/Oscar_Piastri",
+    "givenName": "Oscar",
+    "familyName": "Piastri",
+    "dateOfBirth": "2001-04-06",
+    "nationality": "Australian"
+  },
+  "constructor": {
+    "constructorId": "piastri",
+    "name": "Unknown"
+  },
+  "laps": [],
+  "lapError": null
+}

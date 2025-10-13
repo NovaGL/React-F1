@@ -1,224 +1,154 @@
+// OpenF1 API Client for F1 Data
+// Using OpenF1 API: https://openf1.org/
+
 const OPENF1_BASE_URL = 'https://api.openf1.org/v1';
 
+// Cache for API responses
 const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes by default
-const MIN_REQUEST_INTERVAL = 300; // ms between OpenF1 requests
-let lastRequestTimestamp = 0;
 
-const DRIVER_NUMBER_MAP = new Map([
-  ['albon', 23],
-  ['alonso', 14],
-  ['bearman', 87],
-  ['bottas', 77],
-  ['de_vries', 21],
-  ['doohan', 18],
-  ['gasly', 10],
-  ['hamilton', 44],
-  ['hulkenberg', 27],
-  ['kevin_magnussen', 20],
-  ['lawson', 40],
-  ['leclerc', 16],
-  ['max_verstappen', 1],
-  ['norris', 4],
-  ['ocon', 31],
-  ['perez', 11],
-  ['piastri', 81],
-  ['ricciardo', 3],
-  ['russell', 63],
-  ['sainz', 55],
-  ['sargeant', 2],
-  ['stroll', 18],
-  ['tsunoda', 22],
-  ['zhou', 24],
-]);
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function enforceRateLimit() {
-  const now = Date.now();
-  const elapsed = now - lastRequestTimestamp;
-  if (elapsed < MIN_REQUEST_INTERVAL) {
-    await sleep(MIN_REQUEST_INTERVAL - elapsed);
+// OpenF1 has very permissive rate limits - no throttling needed for maximum speed
+async function fetchWithRateLimit(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response;
+  } catch (error) {
+    console.error(`Error fetching ${url}:`, error);
+    throw error;
   }
-  lastRequestTimestamp = Date.now();
 }
 
-function buildUrl(path, params = {}) {
-  const url = new URL(`${OPENF1_BASE_URL}/${path}`);
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === null || value === '') continue;
-    url.searchParams.set(key, value);
-  }
-  return url;
-}
-
-async function fetchJson(path, params = {}, { cacheKey, ttl = CACHE_TTL } = {}) {
-  const url = buildUrl(path, params);
-  const finalCacheKey = cacheKey || url.toString();
-  const cached = cache.get(finalCacheKey);
-  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+// Helper to fetch with caching
+async function fetchWithCache(url, cacheKey, cacheDuration = 3600000) {
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < cacheDuration) {
     return cached.data;
   }
 
-  await enforceRateLimit();
-
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'React-F1 Dashboard (openf1 fallback)',
-    },
-  });
-
-  if (!response.ok) {
-    const error = new Error(`OpenF1 API error: ${response.status}`);
-    error.status = response.status;
-    throw error;
-  }
-
+  const response = await fetchWithRateLimit(url);
   const data = await response.json();
-  cache.set(finalCacheKey, { data, timestamp: Date.now(), ttl });
+  cache.set(cacheKey, { data, timestamp: Date.now() });
   return data;
 }
 
-async function resolveSessionKey(season, round) {
-  try {
-    const sessions = await fetchJson('sessions', {
-      year: season,
-      session_type: 'R',
-      round,
-      limit: 5,
-    }, { cacheKey: `sessions-${season}-${round}`, ttl: 60 * 60 * 1000 });
+// Get session key for a specific year and round
+// This maps Ergast year/round to OpenF1 session_key
+export async function getSessionKey(year, round) {
+  const cacheKey = `session-${year}-${round}`;
 
-    if (Array.isArray(sessions) && sessions.length > 0) {
-      const raceSession = sessions.find((session) => session.session_type === 'R');
-      return (raceSession || sessions[0]).session_key;
+  try {
+    // Get all race sessions for the year
+    const url = `${OPENF1_BASE_URL}/sessions?year=${year}&session_name=Race`;
+    const sessions = await fetchWithCache(url, `sessions-${year}`, 3600000);
+
+    // Sort by date and get the session for this round
+    const sortedSessions = sessions.sort((a, b) =>
+      new Date(a.date_start) - new Date(b.date_start)
+    );
+
+    // Round is 1-indexed, array is 0-indexed
+    const session = sortedSessions[parseInt(round) - 1];
+
+    if (!session) {
+      console.warn(`No session found for ${year} round ${round}`);
+      return null;
     }
+
+    return session.session_key;
   } catch (error) {
-    console.warn(`Failed to resolve OpenF1 session for ${season} round ${round}:`, error);
+    console.error(`Error getting session key for ${year} round ${round}:`, error);
+    return null;
   }
-  return null;
 }
 
-async function resolveDriverNumber(driverId, season) {
-  const normalized = typeof driverId === 'string' ? driverId.toLowerCase() : '';
-  if (!normalized) return null;
+// Get lap times for all drivers in a session
+// Returns Map<driver_number, Array<laps>>
+export async function getAllLapTimes(sessionKey) {
+  const cacheKey = `all-laps-${sessionKey}`;
 
   try {
-    const drivers = await fetchJson('drivers', {
-      year: season,
-      driver_ref: normalized,
-      limit: 5,
-    }, { cacheKey: `driver-${season}-${normalized}`, ttl: 24 * 60 * 60 * 1000 });
+    const url = `${OPENF1_BASE_URL}/laps?session_key=${sessionKey}`;
+    const laps = await fetchWithCache(url, cacheKey, 3600000);
 
-    if (Array.isArray(drivers) && drivers.length > 0) {
-      const match = drivers.find((driver) =>
-        driver?.driver_ref?.toLowerCase() === normalized ||
-        driver?.driver_id?.toLowerCase() === normalized ||
-        driver?.last_name?.toLowerCase() === normalized
-      );
+    // Group by driver number
+    const lapsByDriver = new Map();
 
-      const target = match || drivers[0];
-      if (target?.driver_number != null) {
-        const parsedNumber = Number.parseInt(target.driver_number, 10);
-        if (Number.isFinite(parsedNumber)) {
-          return parsedNumber;
-        }
+    for (const lap of laps) {
+      if (!lap.lap_duration) continue; // Skip laps without duration
+
+      const driverNum = lap.driver_number;
+      if (!lapsByDriver.has(driverNum)) {
+        lapsByDriver.set(driverNum, []);
       }
+
+      lapsByDriver.get(driverNum).push({
+        lap: lap.lap_number,
+        time: formatLapTime(lap.lap_duration), // Convert seconds to mm:ss.sss
+        duration: lap.lap_duration,
+        sector1: lap.duration_sector_1,
+        sector2: lap.duration_sector_2,
+        sector3: lap.duration_sector_3,
+        isPitLap: lap.is_pit_out_lap
+      });
     }
+
+    // Sort each driver's laps by lap number
+    for (const [driverNum, driverLaps] of lapsByDriver) {
+      driverLaps.sort((a, b) => a.lap - b.lap);
+    }
+
+    return lapsByDriver;
   } catch (error) {
-    console.warn(`Failed to resolve OpenF1 driver number for ${driverId}:`, error);
+    console.error(`Error fetching all lap times for session ${sessionKey}:`, error);
+    return new Map();
   }
-
-  if (DRIVER_NUMBER_MAP.has(normalized)) {
-    return DRIVER_NUMBER_MAP.get(normalized);
-  }
-
-  // Some Ergast IDs include underscores, try using the last segment as a fallback key
-  if (normalized.includes('_')) {
-    const fallbackKey = normalized.split('_').pop();
-    if (fallbackKey && DRIVER_NUMBER_MAP.has(fallbackKey)) {
-      return DRIVER_NUMBER_MAP.get(fallbackKey);
-    }
-  }
-
-  return null;
 }
 
-function formatLapDuration(value) {
-  if (value == null) return null;
+// Get drivers for a session with their details
+export async function getSessionDrivers(sessionKey) {
+  const cacheKey = `drivers-${sessionKey}`;
 
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    const totalMilliseconds = Math.round(value * 1000);
-    const minutes = Math.floor(totalMilliseconds / 60000);
-    const seconds = Math.floor((totalMilliseconds % 60000) / 1000);
-    const milliseconds = totalMilliseconds % 1000;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
-  }
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-
-    // Already formatted as mm:ss.mmm
-    if (/^\d+:\d{2}\.\d{3}$/.test(trimmed)) {
-      return trimmed;
-    }
-
-    const numeric = Number.parseFloat(trimmed);
-    if (Number.isFinite(numeric)) {
-      return formatLapDuration(numeric);
-    }
-  }
-
-  return null;
-}
-
-export async function getLapTimesFromOpenF1(season, round, driverId) {
   try {
-    const [sessionKey, driverNumber] = await Promise.all([
-      resolveSessionKey(season, round),
-      resolveDriverNumber(driverId, season),
-    ]);
+    const url = `${OPENF1_BASE_URL}/drivers?session_key=${sessionKey}`;
+    const drivers = await fetchWithCache(url, cacheKey, 3600000);
 
-    if (!sessionKey || !driverNumber) {
-      return [];
-    }
-
-    const laps = await fetchJson('laps', {
-      session_key: sessionKey,
-      driver_number: driverNumber,
-      select: 'lap_number,lap_duration,lap_time',
-      order: 'lap_number.asc',
-      limit: 1000,
-    }, { cacheKey: `laps-${sessionKey}-${driverNumber}`, ttl: 60 * 60 * 1000 });
-
-    if (!Array.isArray(laps)) {
-      return [];
-    }
-
-    return laps
-      .map((lap) => {
-        const lapNumber = Number.parseInt(lap?.lap_number, 10);
-        if (!Number.isFinite(lapNumber)) {
-          return null;
-        }
-
-        const duration = formatLapDuration(
-          lap?.lap_duration ?? lap?.lap_time ?? null,
-        );
-
-        if (!duration) {
-          return null;
-        }
-
-        return { lap: lapNumber, time: duration };
-      })
-      .filter(Boolean);
+    return drivers;
   } catch (error) {
-    console.warn(`OpenF1 lap fallback failed for ${season} round ${round}:`, error);
+    console.error(`Error fetching drivers for session ${sessionKey}:`, error);
     return [];
   }
 }
 
-export function clearOpenF1Cache() {
+// Format lap time from seconds to mm:ss.sss
+function formatLapTime(seconds) {
+  if (!seconds) return null;
+
+  const minutes = Math.floor(seconds / 60);
+  const secs = (seconds % 60).toFixed(3);
+
+  return `${minutes}:${secs.padStart(6, '0')}`;
+}
+
+// Map driver number to Ergast driverId (best effort)
+// OpenF1 uses driver numbers, Ergast uses driver IDs
+export function mapDriverNumberToErgastId(driverNumber, sessionDrivers, ergastResults) {
+  // Try to find driver in session drivers
+  const sessionDriver = sessionDrivers.find(d => d.driver_number === driverNumber);
+
+  if (!sessionDriver) return null;
+
+  // Try to match by last name
+  const lastName = sessionDriver.last_name.toLowerCase();
+  const ergastDriver = ergastResults.find(result =>
+    result.Driver.familyName.toLowerCase() === lastName
+  );
+
+  return ergastDriver?.Driver.driverId || null;
+}
+
+// Clear cache (useful for forcing refresh)
+export function clearCache() {
   cache.clear();
 }
