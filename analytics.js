@@ -450,11 +450,14 @@ export async function getDriverPerformanceTrends(year = 'current') {
         Object.keys(driverTrends).forEach(driverId => {
             const driver = driverTrends[driverId];
             const positions = driver.races.map(r => r.position);
-            const totalPoints = driver.races.reduce((sum, r) => sum + r.points, 0);
-            const avgPosition = positions.reduce((sum, p) => sum + p, 0) / positions.length;
+            const racePoints = driver.races.reduce((sum, r) => sum + r.points, 0);
+            const avgPosition = positions.length > 0
+                ? positions.reduce((sum, p) => sum + p, 0) / positions.length
+                : 0;
 
-            driver.avgPosition = avgPosition.toFixed(1);
-            driver.totalPoints = totalPoints;
+            driver.avgPosition = positions.length > 0 ? avgPosition.toFixed(1) : '—';
+            driver.racePoints = racePoints;
+            driver.totalPoints = racePoints;
             driver.podiums = positions.filter(p => p <= 3).length;
             driver.wins = positions.filter(p => p === 1).length;
 
@@ -466,6 +469,40 @@ export async function getDriverPerformanceTrends(year = 'current') {
 
             driver.trend = firstAvg > secondAvg ? 'improving' :
                           firstAvg < secondAvg ? 'declining' : 'stable';
+        });
+
+        // Merge in official standings to capture sprint points and ensure totals align
+        const standings = await ErgastAPI.getDriverStandings(
+            year === 'current' ? new Date().getFullYear() : year
+        );
+
+        standings.forEach(standing => {
+            const driverId = standing.Driver.driverId;
+            if (!driverTrends[driverId]) {
+                const fullName = `${standing.Driver.givenName} ${standing.Driver.familyName}`;
+                driverTrends[driverId] = {
+                    driverId,
+                    name: fullName,
+                    team: standing.Constructors[0]?.name,
+                    teamId: standing.Constructors[0]?.constructorId,
+                    races: [],
+                    avgPosition: '—',
+                    podiums: 0,
+                    wins: parseInt(standing.wins || '0', 10),
+                    racePoints: 0,
+                    totalPoints: 0,
+                    trend: 'stable'
+                };
+            }
+
+            const driver = driverTrends[driverId];
+            driver.team = driver.team || standing.Constructors[0]?.name;
+            driver.teamId = driver.teamId || standing.Constructors[0]?.constructorId;
+            driver.wins = driver.wins || parseInt(standing.wins || '0', 10);
+
+            const officialPoints = parseFloat(standing.points || '0');
+            driver.totalPoints = officialPoints;
+            driver.sprintPoints = officialPoints - (driver.racePoints || 0);
         });
 
         const result = {

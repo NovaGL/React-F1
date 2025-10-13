@@ -6,7 +6,7 @@ import {
   TEAM_LOGOS as SHARED_TEAM_LOGOS,
   getTeamColor as resolveTeamColor,
   getTeamLogoUrl as resolveTeamLogoUrl
-} from './theme';
+} from './theme.js';
 
 const ERGAST_BASE_URL = 'https://api.jolpi.ca/ergast/f1';
 
@@ -16,6 +16,7 @@ const cache = new Map();
 const MIN_REQUEST_INTERVAL = 750; // ms between calls to avoid bursts
 const MAX_RETRY_ATTEMPTS = 3;
 const BASE_RETRY_DELAY = 1000; // ms
+const LAP_TIME_PAGE_SIZE = 200;
 let lastRequestTimestamp = 0;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -105,6 +106,13 @@ export async function getDriverStandings(year = 'current') {
   return data.MRData.StandingsTable.StandingsLists[0]?.DriverStandings || [];
 }
 
+export async function getDriverStandingsByRound(year, round) {
+  const cacheKey = `driver-standings-${year}-${round}`;
+  const url = `${ERGAST_BASE_URL}/${year}/${round}/driverStandings.json`;
+  const data = await fetchWithCache(url, cacheKey, 1800000);
+  return data.MRData.StandingsTable.StandingsLists[0]?.DriverStandings || [];
+}
+
 // Get current constructor standings
 export async function getConstructorStandings(year = 'current') {
   const url = `${ERGAST_BASE_URL}/${year}/constructorStandings.json`;
@@ -141,21 +149,78 @@ export async function getSprintResults(year, round) {
 }
 // Get lap times for a specific driver in a race
 export async function getLapTimes(season, round, driverId) {
+  const cacheKey = `lap-times-${season}-${round}-${driverId}`;
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 3600000) {
+    return cached.data;
+  }
+
+  const parseLapResponse = (data) => {
+    const race = data?.MRData?.RaceTable?.Races?.[0];
+    if (!race || !race.Laps) return [];
+
+    return race.Laps.map((lap) => ({
+      lap: lap.number,
+      time: lap.Timings[0].time,
+    }));
+  };
+
+  const fetchLapPage = async (offset) => {
+    const url = `${ERGAST_BASE_URL}/${season}/${round}/drivers/${driverId}/laps.json?limit=${LAP_TIME_PAGE_SIZE}&offset=${offset}`;
+
     try {
-        const url = `${ERGAST_BASE_URL}/${season}/${round}/drivers/${driverId}/laps.json?limit=1000`;
-        const data = await fetchWithCache(url, `lap-times-${season}-${round}-${driverId}`, 3600000);
-        
-        const race = data.MRData.RaceTable.Races[0];
-        if (!race || !race.Laps) return [];
-        
-        return race.Laps.map(lap => ({
-            lap: lap.number,
-            time: lap.Timings[0].time
-        }));
+      const response = await fetchWithRateLimit(url);
+      const data = await response.json();
+      const total = parseInt(data?.MRData?.total ?? '0', 10);
+      return {
+        laps: parseLapResponse(data),
+        total: Number.isNaN(total) ? 0 : total,
+        success: true,
+      };
     } catch (error) {
-        console.error('Error fetching lap times:', error);
-        return [];
+      console.error(`Error fetching lap times for ${driverId} round ${round} (offset ${offset}):`, error);
+      return {
+        laps: [],
+        total: null,
+        success: false,
+      };
     }
+  };
+
+  const aggregatedLaps = [];
+  let totalLaps = null;
+  let offset = 0;
+  let hadSuccessfulPage = false;
+
+  while (totalLaps === null || offset < totalLaps) {
+    const { laps, total, success } = await fetchLapPage(offset);
+
+    if (!success) {
+      break;
+    }
+
+    hadSuccessfulPage = true;
+    if (totalLaps === null) {
+      totalLaps = total;
+    }
+
+    if (laps.length === 0) {
+      break;
+    }
+
+    aggregatedLaps.push(...laps);
+    offset += LAP_TIME_PAGE_SIZE;
+
+    if (aggregatedLaps.length >= totalLaps) {
+      break;
+    }
+  }
+
+  if (hadSuccessfulPage) {
+    cache.set(cacheKey, { data: aggregatedLaps, timestamp: Date.now() });
+  }
+
+  return aggregatedLaps;
 }
 
 // Get fastest laps for a specific race
