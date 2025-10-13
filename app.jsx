@@ -1809,25 +1809,66 @@ const LapTimeChart = ({ race }) => {
             if (!race.isPast || !race.results) return;
 
             setLoading(true);
-            const limit = Math.max(
+
+            const baseDriverEntries = race.results.map(result => ({
+                driver: result.Driver,
+                constructor: result.Constructor,
+                laps: [],
+                hasLapData: false
+            }));
+
+            const entryMap = new Map(baseDriverEntries.map(entry => [entry.driver.driverId, entry]));
+
+            let priorityStandings = [];
+            try {
+                if (typeof ErgastAPI.getDriverStandingsByRound === 'function') {
+                    priorityStandings = await ErgastAPI.getDriverStandingsByRound(race.season, race.round);
+                }
+
+                if ((!priorityStandings || priorityStandings.length === 0) && typeof ErgastAPI.getDriverStandings === 'function') {
+                    priorityStandings = await ErgastAPI.getDriverStandings(race.season);
+                }
+            } catch (err) {
+                console.warn('Failed to load driver standings for prioritisation:', err);
+            }
+
+            const topSeasonDriverIds = (priorityStandings || [])
+                .slice(0, 5)
+                .map(standing => standing?.Driver?.driverId)
+                .filter(Boolean);
+
+            const configuredLimit = Math.max(
                 1,
                 Math.min(
                     typeof LAP_TIME_DRIVER_LIMIT === 'number' ? LAP_TIME_DRIVER_LIMIT : 10,
                     race.results.length
                 )
             );
-            const driversToFetch = race.results.slice(0, limit).map(result => ({
-                driver: result.Driver,
-                constructor: result.Constructor,
-                laps: [],
-                hasLapData: false
-            }));
+
+            const driversToFetchCount = Math.min(
+                baseDriverEntries.length,
+                Math.max(configuredLimit, topSeasonDriverIds.length)
+            );
+
+            const driversToFetch = [];
+            const includedIds = new Set();
+            const includeEntry = (entry) => {
+                if (!entry || includedIds.has(entry.driver.driverId)) {
+                    return;
+                }
+                driversToFetch.push(entry);
+                includedIds.add(entry.driver.driverId);
+            };
+
+            topSeasonDriverIds.forEach(driverId => includeEntry(entryMap.get(driverId)));
+            for (const entry of baseDriverEntries) {
+                if (driversToFetch.length >= driversToFetchCount) break;
+                includeEntry(entry);
+            }
+
             setLoadingProgress({ current: 0, total: driversToFetch.length });
 
             try {
-                const driverLaps = [];
-
-                // Fetch lap times sequentially with delay to avoid rate limiting
                 for (let i = 0; i < driversToFetch.length; i++) {
                     const entry = driversToFetch[i];
                     setLoadingProgress({ current: i + 1, total: driversToFetch.length });
@@ -1837,28 +1878,29 @@ const LapTimeChart = ({ race }) => {
                         if (laps && laps.length > 0) {
                             entry.laps = laps;
                             entry.hasLapData = true;
-                            driverLaps.push({
-                                driver: entry.driver,
-                                constructor: entry.constructor,
-                                laps: laps
-                            });
                         }
                     } catch (err) {
                         console.warn(`No lap data for ${entry.driver.familyName}`);
                     }
 
-                    // Add delay between requests to avoid rate limiting (200ms)
                     if (i < driversToFetch.length - 1) {
                         await new Promise(resolve => setTimeout(resolve, 200));
                     }
                 }
 
-                setLapData(driverLaps);
-                setDriverOptions(driversToFetch);
-                setAllDrivers(driversToFetch.map(d => d.driver.driverId));
-                // Auto-select top drivers (capped at 5 for readability)
-                const autoSelectCount = Math.min(5, driverLaps.length);
-                setSelectedDrivers(driverLaps.slice(0, autoSelectCount).map(d => d.driver.driverId));
+                setLapData(baseDriverEntries.filter(entry => entry.hasLapData));
+                setDriverOptions(baseDriverEntries);
+                const driversWithDataIds = baseDriverEntries
+                    .filter(entry => entry.hasLapData)
+                    .map(entry => entry.driver.driverId);
+                setAllDrivers(driversWithDataIds);
+
+                const autoSelect = driversToFetch
+                    .filter(entry => entry.hasLapData)
+                    .slice(0, Math.min(5, driversToFetch.length))
+                    .map(entry => entry.driver.driverId);
+                const fallbackSelection = autoSelect.length > 0 ? autoSelect : driversWithDataIds.slice(0, 1);
+                setSelectedDrivers(fallbackSelection);
             } catch (err) {
                 console.error('Error fetching lap times:', err);
             } finally {
@@ -2011,6 +2053,11 @@ const LapTimeChart = ({ race }) => {
     };
 
     const addDriver = (driverId) => {
+        const option = driverOptions.find(d => d.driver.driverId === driverId);
+        if (!option?.hasLapData) {
+            return;
+        }
+
         if (!selectedDrivers.includes(driverId)) {
             setSelectedDrivers([...selectedDrivers, driverId]);
         }
@@ -2115,7 +2162,8 @@ const LapTimeChart = ({ race }) => {
                                         addDriver(driverData.driver.driverId);
                                         setSearchInput('');
                                     }}
-                                    className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left hover:bg-gray-700 ${driverData.hasLapData ? '' : 'opacity-75'}`}
+                                    disabled={!driverData.hasLapData}
+                                    className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left ${driverData.hasLapData ? 'hover:bg-gray-700' : 'opacity-60 cursor-not-allowed'}`}
                                 >
                                     <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-900 flex-shrink-0 ring-2"
                                         style={{ ringColor: teamColor }}>
@@ -2144,7 +2192,7 @@ const LapTimeChart = ({ race }) => {
 
             {driversWithoutData.length > 0 && (
                 <p className="mt-2 text-xs text-yellow-400">
-                    Lap time data is not provided by the API for {driversWithoutData.length} of the top drivers. They remain selectable but will be noted as unavailable.
+                    Lap time data is not provided by the API for {driversWithoutData.length} drivers. They remain listed but cannot be added to the chart.
                 </p>
             )}
 
