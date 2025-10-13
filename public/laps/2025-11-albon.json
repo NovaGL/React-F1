@@ -1,0 +1,150 @@
+{
+  "season": "2025",
+  "round": "11",
+  "raceName": "Austrian Grand Prix",
+  "driver": {
+    "driverId": "albon",
+    "permanentNumber": "23",
+    "code": "ALB",
+    "url": "http://en.wikipedia.org/wiki/Alexander_Albon",
+    "givenName": "Alexander",
+    "familyName": "Albon",
+    "dateOfBirth": "1996-03-23",
+    "nationality": "Thai"
+  },
+  "constructor": {
+    "constructorId": "williams",
+    "url": "http://en.wikipedia.org/wiki/Williams_Grand_Prix_Engineering",
+    "name": "Williams",
+    "nationality": "British"
+  },
+  "laps": [
+    {
+      "lap": 2,
+      "time": "1:49.602",
+      "duration": 109.602,
+      "sector1": 23.481,
+      "sector2": 50.86,
+      "sector3": 35.261,
+      "isPitLap": false
+    },
+    {
+      "lap": 3,
+      "time": "1:47.182",
+      "duration": 107.182,
+      "sector1": 25.525,
+      "sector2": 49.271,
+      "sector3": 32.386,
+      "isPitLap": false
+    },
+    {
+      "lap": 4,
+      "time": "1:11.975",
+      "duration": 71.975,
+      "sector1": 17.779,
+      "sector2": 32.085,
+      "sector3": 22.111,
+      "isPitLap": false
+    },
+    {
+      "lap": 5,
+      "time": "1:11.163",
+      "duration": 71.163,
+      "sector1": 17.486,
+      "sector2": 31.667,
+      "sector3": 22.01,
+      "isPitLap": false
+    },
+    {
+      "lap": 6,
+      "time": "1:10.881",
+      "duration": 70.881,
+      "sector1": 17.279,
+      "sector2": 31.668,
+      "sector3": 21.934,
+      "isPitLap": false
+    },
+    {
+      "lap": 7,
+      "time": "1:11.009",
+      "duration": 71.009,
+      "sector1": 17.349,
+      "sector2": 31.712,
+      "sector3": 21.948,
+      "isPitLap": false
+    },
+    {
+      "lap": 8,
+      "time": "1:10.850",
+      "duration": 70.85,
+      "sector1": 17.387,
+      "sector2": 31.684,
+      "sector3": 21.779,
+      "isPitLap": false
+    },
+    {
+      "lap": 9,
+      "time": "1:10.641",
+      "duration": 70.641,
+      "sector1": 17.434,
+      "sector2": 31.467,
+      "sector3": 21.74,
+      "isPitLap": false
+    },
+    {
+      "lap": 10,
+      "time": "1:11.401",
+      "duration": 71.401,
+      "sector1": 17.896,
+      "sector2": 31.655,
+      "sector3": 21.85,
+      "isPitLap": false
+    },
+    {
+      "lap": 11,
+      "time": "1:11.541",
+      "duration": 71.541,
+      "sector1": 17.902,
+      "sector2": 31.777,
+      "sector3": 21.862,
+      "isPitLap": false
+    },
+    {
+      "lap": 12,
+      "time": "1:11.316",
+      "duration": 71.316,
+      "sector1": 17.858,
+      "sector2": 31.646,
+      "sector3": 21.812,
+      "isPitLap": false
+    },
+    {
+      "lap": 13,
+      "time": "1:14.030",
+      "duration": 74.03,
+      "sector1": 17.785,
+      "sector2": 31.52,
+      "sector3": 24.725,
+      "isPitLap": false
+    },
+    {
+      "lap": 14,
+      "time": "1:27.615",
+      "duration": 87.615,
+      "sector1": 34.337,
+      "sector2": 31.55,
+      "sector3": 21.728,
+      "isPitLap": true
+    },
+    {
+      "lap": 15,
+      "time": "1:18.845",
+      "duration": 78.845,
+      "sector1": 17.755,
+      "sector2": 31.437,
+      "sector3": 29.653,
+      "isPitLap": false
+    }
+  ],
+  "lapError": null
+}
