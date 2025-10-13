@@ -1959,19 +1959,27 @@ const LapTimeChart = ({ race }) => {
     // Prepare chart data
     const filteredData = lapData.filter(d => selectedDrivers.includes(d.driver.driverId));
     
+    const allLapNumbers = Array.from(new Set(
+        filteredData.flatMap(driverData => driverData.laps.map(lap => lap.lap))
+    )).sort((a, b) => a - b);
+
     const chartData = {
-        labels: filteredData[0]?.laps.map(lap => lap.lap) || [],
+        labels: allLapNumbers,
         datasets: filteredData.map(driverData => {
             const teamColor = getTeamColor(driverData.constructor.constructorId);
+            const lapTimeMap = new Map(
+                driverData.laps.map(lap => {
+                    const [minutesPart, secondsPart] = lap.time.split(':');
+                    const minutes = parseInt(minutesPart, 10);
+                    const seconds = parseFloat(secondsPart);
+                    const totalSeconds = minutes * 60 + seconds;
+                    return [lap.lap, totalSeconds];
+                })
+            );
+
             return {
                 label: `${driverData.driver.givenName} ${driverData.driver.familyName}`,
-                data: driverData.laps.map(lap => {
-                    // Convert lap time (1:23.456) to seconds
-                    const parts = lap.time.split(':');
-                    const minutes = parseInt(parts[0]);
-                    const seconds = parseFloat(parts[1]);
-                    return (minutes * 60 + seconds).toFixed(3);
-                }),
+                data: allLapNumbers.map(lapNumber => lapTimeMap.has(lapNumber) ? lapTimeMap.get(lapNumber) : null),
                 borderColor: teamColor,
                 backgroundColor: teamColor + '20',
                 borderWidth: 2,
@@ -2003,7 +2011,11 @@ const LapTimeChart = ({ race }) => {
                 bodyColor: '#d1d5db',
                 callbacks: {
                     label: function(context) {
-                        const seconds = parseFloat(context.parsed.y);
+                        if (context.parsed?.y == null) {
+                            return `${context.dataset.label}: —`;
+                        }
+
+                        const seconds = Number(context.parsed.y);
                         const mins = Math.floor(seconds / 60);
                         const secs = (seconds % 60).toFixed(3);
                         return `${context.dataset.label}: ${mins}:${secs.padStart(6, '0')}`;

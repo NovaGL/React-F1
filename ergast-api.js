@@ -392,6 +392,8 @@ async function loadRaceLapAggregation(season, round) {
         break;
       }
 
+      let pageEntries = 0;
+
       for (const lap of laps) {
         const lapNumber = Number.parseInt(lap?.number ?? '', 10);
         if (!Number.isFinite(lapNumber)) {
@@ -412,10 +414,15 @@ async function loadRaceLapAggregation(season, round) {
 
           driverLapMap.get(driverKey).push({ lap: lapNumber, time });
           processedEntries += 1;
+          pageEntries += 1;
         }
       }
 
-      offset += RACE_LAP_PAGE_SIZE;
+      if (pageEntries === 0) {
+        break;
+      }
+
+      offset = processedEntries;
 
       if (totalEntries != null && processedEntries >= totalEntries) {
         break;
