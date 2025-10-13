@@ -19,6 +19,79 @@ const BASE_RETRY_DELAY = 1000; // ms
 const LAP_TIME_PAGE_SIZE = 200;
 let lastRequestTimestamp = 0;
 
+const NETWORK_UNREACHABLE_CODES = new Set(['ENETUNREACH', 'EHOSTUNREACH']);
+
+function isNetworkUnreachable(error) {
+  if (!error) return false;
+  const code = error.code || error?.cause?.code;
+  return code ? NETWORK_UNREACHABLE_CODES.has(code) : false;
+}
+
+let execFileAsync;
+async function ensureExecFileAsync() {
+  if (execFileAsync) {
+    return execFileAsync;
+  }
+
+  if (typeof process === 'undefined' || !process?.versions?.node) {
+    throw new Error('curl fallback is only available in a Node.js environment');
+  }
+
+  const [{ execFile }, { promisify }] = await Promise.all([
+    import('node:child_process'),
+    import('node:util')
+  ]);
+
+  execFileAsync = promisify(execFile);
+  return execFileAsync;
+}
+
+async function fetchViaCurl(url, options = {}) {
+  const runExecFile = await ensureExecFileAsync();
+  const args = ['-sS', '-w', '\n%{http_code}\n'];
+
+  if (options.method && options.method !== 'GET') {
+    args.push('-X', options.method);
+  }
+
+  if (options.headers) {
+    for (const [key, value] of Object.entries(options.headers)) {
+      if (typeof value === 'undefined') continue;
+      args.push('-H', `${key}: ${value}`);
+    }
+  }
+
+  if (options.body) {
+    const body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+    args.push('--data-binary', body);
+  }
+
+  args.push(url);
+
+  const { stdout } = await runExecFile('curl', args, { maxBuffer: 15 * 1024 * 1024 });
+  const trimmed = stdout.trimEnd();
+  const lastNewlineIndex = trimmed.lastIndexOf('\n');
+
+  if (lastNewlineIndex === -1) {
+    throw new Error('Unexpected curl response format');
+  }
+
+  const statusCodeStr = trimmed.slice(lastNewlineIndex + 1);
+  const status = Number.parseInt(statusCodeStr, 10);
+  const body = trimmed.slice(0, lastNewlineIndex);
+
+  if (!Number.isFinite(status)) {
+    throw new Error(`Invalid status code from curl: ${statusCodeStr}`);
+  }
+
+  const response = new Response(body, {
+    status,
+    headers: new Headers(),
+  });
+
+  return response;
+}
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function enforceRateLimit() {
@@ -37,11 +110,20 @@ async function fetchWithRateLimit(url, options, attempt = 0) {
   try {
     response = await fetch(url, options);
   } catch (error) {
-    if (attempt < MAX_RETRY_ATTEMPTS) {
+    if (isNetworkUnreachable(error)) {
+      console.warn(`Network unreachable via fetch, falling back to curl for ${url}`);
+      try {
+        response = await fetchViaCurl(url, options);
+      } catch (curlError) {
+        console.warn(`curl fallback failed for ${url}:`, curlError);
+        throw error;
+      }
+    } else if (attempt < MAX_RETRY_ATTEMPTS) {
       await sleep(BASE_RETRY_DELAY * Math.pow(2, attempt));
       return fetchWithRateLimit(url, options, attempt + 1);
+    } else {
+      throw error;
     }
-    throw error;
   }
 
   if (response.status === 429) {
