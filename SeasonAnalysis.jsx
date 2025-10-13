@@ -759,13 +759,17 @@ const WinsYoYChart = () => {
                     ErgastAPI.getDriverStandings(2024)
                 ]);
 
-                const drivers = current.slice(0, 16).map(d => ({
-                    name: `${d.Driver.givenName.charAt(0)}. ${d.Driver.familyName}`,
-                    driverId: d.Driver.driverId,
-                    wins2025: parseInt(d.wins || '0', 10),
-                    wins2024: parseInt(previous.find(p => p.Driver.driverId === d.Driver.driverId)?.wins || '0', 10),
-                    teamColor: getTeamColor(d.Constructors[0]?.constructorId || 'mclaren')
-                }));
+                const drivers = current.slice(0, 16).map(d => {
+                    const fullName = `${d.Driver.givenName} ${d.Driver.familyName}`;
+                    return {
+                        name: fullName,
+                        shortName: `${d.Driver.givenName.charAt(0)}. ${d.Driver.familyName}`,
+                        driverId: d.Driver.driverId,
+                        wins2025: parseInt(d.wins || '0', 10),
+                        wins2024: parseInt(previous.find(p => p.Driver.driverId === d.Driver.driverId)?.wins || '0', 10),
+                        teamColor: getTeamColor(d.Constructors[0]?.constructorId || 'mclaren')
+                    };
+                });
 
                 // Only include drivers who have at least one win in either year
                 const filtered = drivers.filter(d => (d.wins2025 || d.wins2024));
@@ -868,7 +872,13 @@ const WinsYoYChart = () => {
 
     const availableDrivers = allDrivers.filter(d => !selectedDrivers.includes(d.driverId));
     const filteredDrivers = searchInput
-        ? availableDrivers.filter(d => d.name.toLowerCase().includes(searchInput.toLowerCase()))
+        ? availableDrivers.filter(d => {
+            const search = searchInput.toLowerCase();
+            return (
+                d.name.toLowerCase().includes(search) ||
+                (d.shortName?.toLowerCase() || '').includes(search)
+            );
+        })
         : availableDrivers;
 
     return (
