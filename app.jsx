@@ -495,8 +495,11 @@ const LapTimeChart = ({ race }) => {
                 borderColor: teamColor,
                 backgroundColor: teamColor + '20',
                 borderWidth: 2,
-                pointRadius: 0,
-                pointHoverRadius: 4,
+                pointRadius: 2.5,
+                pointHoverRadius: 6,
+                pointHitRadius: 10,
+                pointBorderColor: teamColor,
+                pointBackgroundColor: '#111827',
                 tension: 0.1
             };
         })
