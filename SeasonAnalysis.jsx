@@ -478,46 +478,72 @@ const PointsProgressionChart = ({ battle, stats }) => {
     useEffect(() => {
         const fetchRaceData = async () => {
             try {
-                const schedule = await ErgastAPI.getCurrentSchedule();
-                const completedRaces = schedule.filter(race => {
-                    const raceDate = new Date(race.date + 'T' + race.time);
-                    return raceDate < new Date();
-                });
+                const [schedule, standings] = await Promise.all([
+                    ErgastAPI.getCurrentSchedule(),
+                    ErgastAPI.getDriverStandings('current')
+                ]);
 
-                // Fetch standings after each completed race
-                const progressionData = await Promise.all(
-                    completedRaces.slice(0, 10).map(async (race, idx) => {
-                        try {
-                            const standings = await ErgastAPI.getDriverStandings('current');
-                            return {
-                                round: race.round,
-                                raceName: race.raceName.replace('Grand Prix', 'GP'),
-                                standings: standings.slice(0, 3)
-                            };
-                        } catch (err) {
-                            return null;
-                        }
+                const parseEventDate = (dateStr, timeStr) => {
+                    if (!dateStr) return null;
+                    const timeValue = timeStr || '00:00:00Z';
+                    const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(timeValue);
+                    const isoString = hasTimezone ? `${dateStr}T${timeValue}` : `${dateStr}T${timeValue}Z`;
+                    const parsed = new Date(isoString);
+                    return Number.isNaN(parsed.getTime()) ? null : parsed;
+                };
+
+                const now = new Date();
+                const completedRaces = schedule
+                    .filter(race => {
+                        const raceDate = parseEventDate(race.date, race.time);
+                        return raceDate ? raceDate < now : false;
                     })
-                );
+                    .sort((a, b) => parseInt(a.round, 10) - parseInt(b.round, 10));
 
-                setRaceData(progressionData.filter(d => d !== null));
-
-                // Fetch all current driver standings
-                const currentStandings = await ErgastAPI.getDriverStandings('current');
-
-                // Map to our driver format with all necessary data
-                const drivers = currentStandings.map(standing => ({
+                const drivers = standings.map(standing => ({
                     name: `${standing.Driver.givenName} ${standing.Driver.familyName}`,
                     driverId: standing.Driver.driverId,
-                    points: parseInt(standing.points),
-                    wins: parseInt(standing.wins || '0'),
+                    code: standing.Driver.code,
+                    points: parseFloat(standing.points || '0'),
+                    wins: parseInt(standing.wins || '0', 10),
                     team: standing.Constructors[0]?.name || 'Unknown',
                     teamId: standing.Constructors[0]?.constructorId || 'unknown'
                 }));
 
                 setAllDrivers(drivers);
-                // Default to top 3
-                setSelectedDrivers(drivers.slice(0, 3).map(d => d.name));
+
+                const raceSnapshots = [];
+
+                for (const race of completedRaces) {
+                    try {
+                        const roundStandings = await ErgastAPI.getDriverStandingsByRound(race.season, race.round);
+
+                        if (roundStandings && roundStandings.length > 0) {
+                            const snapshotPoints = {};
+                            roundStandings.forEach(entry => {
+                                const driverId = entry.Driver.driverId;
+                                snapshotPoints[driverId] = parseFloat(entry.points || '0');
+                            });
+
+                            raceSnapshots.push({
+                                round: race.round,
+                                raceName: race.raceName ? race.raceName.replace('Grand Prix', 'GP') : `Round ${race.round}`,
+                                points: snapshotPoints
+                            });
+                        } else {
+                            console.warn(`No standings available for round ${race.round}`);
+                        }
+                    } catch (err) {
+                        console.warn(`Could not load standings for round ${race.round}`);
+                    }
+                }
+
+                if (raceSnapshots.length === 0) {
+                    console.warn('No driver standings snapshots available for progression chart');
+                }
+
+                setRaceData(raceSnapshots);
+                setSelectedDrivers(drivers.slice(0, 3).map(d => d.driverId));
             } catch (error) {
                 console.error('Error fetching race progression:', error);
             } finally {
@@ -528,81 +554,55 @@ const PointsProgressionChart = ({ battle, stats }) => {
         fetchRaceData();
     }, []);
 
-    const addDriver = (driverName) => {
-        if (!selectedDrivers.includes(driverName)) {
-            setSelectedDrivers([...selectedDrivers, driverName]);
+    const addDriver = (driverId) => {
+        if (!selectedDrivers.includes(driverId)) {
+            setSelectedDrivers([...selectedDrivers, driverId]);
         }
     };
 
-    const removeDriver = (driverName) => {
+    const removeDriver = (driverId) => {
         // Don't allow removing if it's the last one
         if (selectedDrivers.length === 1) return;
-        setSelectedDrivers(selectedDrivers.filter(n => n !== driverName));
+        setSelectedDrivers(selectedDrivers.filter(id => id !== driverId));
     };
 
-    if (loading || !raceData || raceData.length === 0) {
+    if (loading) {
         return <div className="text-gray-400 text-center py-8">Loading points progression data...</div>;
     }
 
-    const displayDrivers = allDrivers.filter(d => selectedDrivers.includes(d.name));
+    if (!raceData || raceData.length === 0) {
+        return <div className="text-gray-400 text-center py-8">No championship races have been completed yet.</div>;
+    }
 
-    // Create realistic non-linear data progression
+    const displayDrivers = allDrivers.filter(d => selectedDrivers.includes(d.driverId));
+
+    // Build datasets using actual cumulative points
     const chartData = {
         labels: raceData.map(d => `R${d.round}`),
-        datasets: [...displayDrivers].reverse().map((driver, index) => {
-            const actualIndex = displayDrivers.length - 1 - index; // Get original index for color assignment
-
-            // Create more realistic points progression with variation
-            const finalPoints = Number(driver.points) || 0;
-            const numRaces = raceData.length;
-
-            // Generate realistic points distribution
-            // Top drivers typically score consistently with occasional bad races
-            // Create a seed based on driver name for consistent visualization
-            const driverSeed = driver.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-            const progressionData = raceData.map((_, raceIdx) => {
-                if (raceIdx === 0) {
-                    // First race - assign 15-25 points for top drivers
-                    return Math.floor(finalPoints * (0.08 + (Math.sin(driverSeed + raceIdx) * 0.02)));
-                }
-
-                // Calculate a realistic progression with ups and downs
-                const baseProgress = (raceIdx + 1) / numRaces;
-                const variance = Math.sin((driverSeed + raceIdx) * 0.7) * 0.08; // ±8% variance
-                const racePoints = Math.max(0, finalPoints * (baseProgress + variance));
-
-                return Math.floor(racePoints);
-            });
-
-            // Define vibrant fallback colors for each position
+        datasets: displayDrivers.map((driver, index) => {
             const vibrantColors = ['#FF1E1E', '#0090FF', '#00D962', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
-
-            // Get team color with fallback to vibrant position-based colors
-            let baseColor = resolveTeamColor(driver);
-
-            // Always use vibrant fallback colors if team color is missing, white, or too light
-            if (!baseColor || baseColor.toUpperCase() === '#FFFFFF' || baseColor.toUpperCase() === '#FFF' || baseColor === '#ffffff') {
-                baseColor = vibrantColors[actualIndex % vibrantColors.length];
+            let baseColor = getTeamColor(driver.teamId || driver.team || driver.driverId);
+            if (!baseColor || ['#FFFFFF', '#FFF', '#ffffff'].includes(baseColor)) {
+                baseColor = vibrantColors[index % vibrantColors.length];
             }
 
             const borderColor = baseColor;
 
             return {
                 label: driver.name,
-                data: progressionData,
+                data: raceData.map(race => race.points[driver.driverId] ?? 0),
                 borderColor,
                 backgroundColor: 'transparent',
-                tension: 0.4,
+                tension: 0.3,
                 fill: false,
-                pointRadius: 5,
-                pointHoverRadius: 8,
+                pointRadius: 4,
+                pointHoverRadius: 7,
                 pointBackgroundColor: borderColor,
                 pointBorderColor: '#1f2937',
                 pointBorderWidth: 2,
                 borderWidth: 3
             };
-        }).reverse() // Reverse again so legend shows in correct order (leader first)
+        })
     };
 
     const options = {
@@ -643,9 +643,15 @@ const PointsProgressionChart = ({ battle, stats }) => {
         }
     };
 
-    const availableDrivers = allDrivers.filter(d => !selectedDrivers.includes(d.name));
+    const availableDrivers = allDrivers.filter(d => !selectedDrivers.includes(d.driverId));
     const filteredDrivers = searchInput
-        ? availableDrivers.filter(d => d.name.toLowerCase().includes(searchInput.toLowerCase()))
+        ? availableDrivers.filter(d => {
+            const search = searchInput.toLowerCase();
+            return (
+                d.name.toLowerCase().includes(search) ||
+                (d.code || '').toLowerCase().includes(search)
+            );
+        })
         : availableDrivers;
 
     return (
@@ -656,10 +662,10 @@ const PointsProgressionChart = ({ battle, stats }) => {
                     <div className="flex flex-wrap gap-2">
                         {/* Selected Driver Tags */}
                         {displayDrivers.map((driver) => {
-                            const teamColor = resolveTeamColor(driver);
+                            const teamColor = getTeamColor(driver.teamId || driver.team || driver.driverId);
                             return (
                                 <div
-                                    key={driver.name}
+                                    key={driver.driverId}
                                     className="flex items-center gap-2 px-2 py-1 rounded border transition-all"
                                     style={{
                                         backgroundColor: `${teamColor}30`,
@@ -677,7 +683,7 @@ const PointsProgressionChart = ({ battle, stats }) => {
                                     <span className="text-sm font-medium text-white">{driver.name}</span>
                                     {selectedDrivers.length > 1 && (
                                         <button
-                                            onClick={() => removeDriver(driver.name)}
+                                            onClick={() => removeDriver(driver.driverId)}
                                             className="ml-1 text-white hover:text-red-400 font-bold transition-colors text-lg leading-none"
                                         >
                                             ×
@@ -706,12 +712,12 @@ const PointsProgressionChart = ({ battle, stats }) => {
                 {showDropdown && filteredDrivers.length > 0 && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-xl max-h-64 overflow-y-auto z-10">
                         {filteredDrivers.map((driver) => {
-                            const teamColor = resolveTeamColor(driver);
+                            const teamColor = getTeamColor(driver.teamId || driver.team || driver.driverId);
                             return (
                                 <button
-                                    key={driver.name}
+                                    key={driver.driverId}
                                     onClick={() => {
-                                        addDriver(driver.name);
+                                        addDriver(driver.driverId);
                                         setSearchInput('');
                                     }}
                                     className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-700 transition-colors text-left"
