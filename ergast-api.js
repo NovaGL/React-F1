@@ -8,15 +8,20 @@ import {
   getTeamLogoUrl as resolveTeamLogoUrl
 } from './theme.js';
 
+import { CONCURRENT_LAP_REQUESTS as CONFIGURED_CONCURRENT_REQUESTS } from './config.js';
+import * as OpenF1 from './openf1-api.js';
+
 const ERGAST_BASE_URL = 'https://api.jolpi.ca/ergast/f1';
 
 // Cache for API responses
 const cache = new Map();
 
-const MIN_REQUEST_INTERVAL = 750; // ms between calls to avoid bursts
+const MIN_REQUEST_INTERVAL = 500; // ms between calls (reduced for parallel fetching)
 const MAX_RETRY_ATTEMPTS = 3;
-const BASE_RETRY_DELAY = 1000; // ms
+const BASE_RETRY_DELAY = 2000; // ms
 const LAP_TIME_PAGE_SIZE = 200;
+const LAP_TIME_RETRY_DELAY = 3000; // ms delay specifically for lap time retries
+const CONCURRENT_LAP_REQUESTS = CONFIGURED_CONCURRENT_REQUESTS || 3; // Number of parallel lap time requests
 let lastRequestTimestamp = 0;
 
 const NETWORK_UNREACHABLE_CODES = new Set(['ENETUNREACH', 'EHOSTUNREACH']);
@@ -230,11 +235,12 @@ export async function getSprintResults(year, round) {
   return data.MRData.RaceTable.Races[0];
 }
 // Get lap times for a specific driver in a race
-export async function getLapTimes(season, round, driverId) {
+// Returns { laps: Array, error: String|null, total: Number }
+export async function getLapTimes(season, round, driverId, retryAttempt = 0) {
   const cacheKey = `lap-times-${season}-${round}-${driverId}`;
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < 3600000) {
-    return cached.data;
+    return { laps: cached.data, error: null, total: cached.data.length };
   }
 
   const parseLapResponse = (data) => {
@@ -247,7 +253,7 @@ export async function getLapTimes(season, round, driverId) {
     }));
   };
 
-  const fetchLapPage = async (offset) => {
+  const fetchLapPage = async (offset, pageRetryAttempt = 0) => {
     const url = `${ERGAST_BASE_URL}/${season}/${round}/drivers/${driverId}/laps.json?limit=${LAP_TIME_PAGE_SIZE}&offset=${offset}`;
 
     try {
@@ -258,13 +264,22 @@ export async function getLapTimes(season, round, driverId) {
         laps: parseLapResponse(data),
         total: Number.isNaN(total) ? 0 : total,
         success: true,
+        error: null
       };
     } catch (error) {
-      console.error(`Error fetching lap times for ${driverId} round ${round} (offset ${offset}):`, error);
+      // If rate limited and we have retries left, wait longer and retry
+      if (error.status === 429 && pageRetryAttempt < 2) {
+        console.warn(`Rate limited fetching ${driverId} laps, retrying after delay...`);
+        await sleep(LAP_TIME_RETRY_DELAY * (pageRetryAttempt + 1));
+        return fetchLapPage(offset, pageRetryAttempt + 1);
+      }
+
+      console.error(`Error fetching lap times for ${driverId} round ${round} (offset ${offset}):`, error.message || error);
       return {
         laps: [],
         total: null,
         success: false,
+        error: error.status === 429 ? 'rate_limited' : 'fetch_failed'
       };
     }
   };
@@ -273,15 +288,38 @@ export async function getLapTimes(season, round, driverId) {
   let totalLaps = null;
   let offset = 0;
   let hadSuccessfulPage = false;
+  let lastError = null;
+  const MAX_ITERATIONS = 20; // Safety: prevent infinite loops (20 * 200 = 4000 laps max)
+  let iterations = 0;
 
   while (totalLaps === null || offset < totalLaps) {
-    const { laps, total, success } = await fetchLapPage(offset);
+    // SAFETY CHECK: Prevent infinite loops
+    if (iterations++ >= MAX_ITERATIONS) {
+      console.error(`Maximum iterations reached for ${driverId}, breaking to prevent infinite loop`);
+      break;
+    }
+
+    const { laps, total, success, error } = await fetchLapPage(offset);
 
     if (!success) {
+      lastError = error;
+      // If we got at least some data, return what we have
+      if (hadSuccessfulPage && aggregatedLaps.length > 0) {
+        console.warn(`Partial lap data for ${driverId}: ${aggregatedLaps.length}/${totalLaps || '?'} laps`);
+        break;
+      }
+      // If this is the first page and we're rate limited, try one more time with longer delay
+      if (error === 'rate_limited' && retryAttempt === 0) {
+        console.warn(`Rate limited on first page for ${driverId}, retrying entire fetch...`);
+        await sleep(LAP_TIME_RETRY_DELAY * 2);
+        return getLapTimes(season, round, driverId, 1);
+      }
       break;
     }
 
     hadSuccessfulPage = true;
+    lastError = null;
+
     if (totalLaps === null) {
       totalLaps = total;
     }
@@ -298,11 +336,109 @@ export async function getLapTimes(season, round, driverId) {
     }
   }
 
-  if (hadSuccessfulPage) {
+  // Cache even partial or empty results to avoid refetching
+  if (hadSuccessfulPage || totalLaps === 0) {
     cache.set(cacheKey, { data: aggregatedLaps, timestamp: Date.now() });
   }
 
-  return aggregatedLaps;
+  return {
+    laps: aggregatedLaps,
+    error: lastError,
+    total: totalLaps || 0
+  };
+}
+
+// Batch fetch lap times for multiple drivers with controlled concurrency
+// Uses OpenF1 API if available (faster, no rate limits), falls back to Ergast
+// Returns array of { driverId, laps, error, total }
+export async function getLapTimesBatch(season, round, driverIds, onProgress = null, raceResults = null) {
+  // Try OpenF1 first (much faster!)
+  try {
+    console.log(`Attempting to fetch lap times via OpenF1 API for ${season} round ${round}...`);
+    const sessionKey = await OpenF1.getSessionKey(season, round);
+
+    if (sessionKey) {
+      console.log(`Found OpenF1 session_key: ${sessionKey}`);
+
+      // Fetch all lap times and drivers in parallel
+      const [allLapTimes, sessionDrivers] = await Promise.all([
+        OpenF1.getAllLapTimes(sessionKey),
+        OpenF1.getSessionDrivers(sessionKey)
+      ]);
+
+      // Map driver IDs to driver numbers and extract lap times
+      const results = [];
+
+      for (let i = 0; i < driverIds.length; i++) {
+        const driverId = driverIds[i];
+
+        // Find the driver number for this driverId
+        const ergastDriver = raceResults?.find(r => r.Driver.driverId === driverId);
+        if (!ergastDriver) {
+          results.push({ driverId, laps: [], error: 'driver_not_found', total: 0 });
+          if (onProgress) onProgress(i + 1, driverIds.length);
+          continue;
+        }
+
+        // Try to find matching OpenF1 driver
+        const lastName = ergastDriver.Driver.familyName.toLowerCase();
+        const openF1Driver = sessionDrivers.find(d =>
+          d.last_name.toLowerCase() === lastName
+        );
+
+        if (!openF1Driver) {
+          results.push({ driverId, laps: [], error: 'driver_not_in_openf1', total: 0 });
+          if (onProgress) onProgress(i + 1, driverIds.length);
+          continue;
+        }
+
+        // Get lap times for this driver
+        const laps = allLapTimes.get(openF1Driver.driver_number) || [];
+
+        results.push({
+          driverId,
+          laps,
+          error: laps.length === 0 ? 'no_data' : null,
+          total: laps.length
+        });
+
+        if (onProgress) onProgress(i + 1, driverIds.length);
+      }
+
+      console.log(`OpenF1 fetch complete: ${results.filter(r => r.laps.length > 0).length}/${driverIds.length} drivers have lap data`);
+      return results;
+    }
+  } catch (error) {
+    console.warn('OpenF1 API failed, falling back to Ergast:', error.message || error);
+  }
+
+  // Fallback to Ergast API
+  console.log('Using Ergast API for lap times (slower)...');
+  const results = new Map();
+
+  // Process in batches of CONCURRENT_LAP_REQUESTS
+  for (let i = 0; i < driverIds.length; i += CONCURRENT_LAP_REQUESTS) {
+    const batch = driverIds.slice(i, i + CONCURRENT_LAP_REQUESTS);
+
+    const batchPromises = batch.map(async (driverId) => {
+      const result = await getLapTimes(season, round, driverId);
+      results.set(driverId, result);
+
+      // Call progress callback if provided
+      if (onProgress) {
+        onProgress(results.size, driverIds.length);
+      }
+
+      return { driverId, ...result };
+    });
+
+    await Promise.all(batchPromises);
+  }
+
+  return driverIds.map(driverId => ({
+    driverId,
+    ...(results.get(driverId) || { laps: [], error: 'not_fetched', total: 0 })
+  }));
 }
 
 // Get fastest laps for a specific race
@@ -310,10 +446,10 @@ export async function getFastestLaps(season, round) {
     try {
         const url = `${ERGAST_BASE_URL}/${season}/${round}/results.json`;
         const data = await fetchWithCache(url, `fastest-laps-${season}-${round}`, 3600000);
-        
+
         const race = data.MRData.RaceTable.Races[0];
         if (!race || !race.Results) return [];
-        
+
         // Filter results that have fastest lap data and sort by rank
         return race.Results
             .filter(result => result.FastestLap)

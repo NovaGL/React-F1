@@ -268,35 +268,36 @@ const useScheduleWithResults = () => {
             try {
                 const races = await ErgastAPI.getCurrentSchedule();
 
-                const racesWithData = [];
+                // FIX: Fetch all race results in parallel instead of sequentially
+                const racesWithData = await Promise.all(
+                    races.map(async (race) => {
+                        const now = new Date();
+                        const raceDate = new Date(race.date + 'T' + race.time);
+                        const isPast = raceDate < now;
 
-                for (const race of races) {
-                    const now = new Date();
-                    const raceDate = new Date(race.date + 'T' + race.time);
-                    const isPast = raceDate < now;
+                        let results = null;
 
-                    let results = null;
-
-                    if (isPast) {
-                        try {
-                            const raceResults = await ErgastAPI.getRaceResults(race.season, race.round);
-                            results = raceResults?.Results || null;
-                        } catch (err) {
-                            console.log(`No current results for ${race.raceName}`);
+                        if (isPast) {
+                            try {
+                                const raceResults = await ErgastAPI.getRaceResults(race.season, race.round);
+                                results = raceResults?.Results || null;
+                            } catch (err) {
+                                console.log(`No current results for ${race.raceName}`);
+                            }
                         }
-                    }
 
-                    if (!results) {
-                        try {
-                            const prevRace = await ErgastAPI.getPreviousYearRace(race.Circuit.circuitId, parseInt(race.season, 10));
-                            results = prevRace?.Results || null;
-                        } catch (err) {
-                            console.log(`No previous year results for ${race.raceName}`);
+                        if (!results) {
+                            try {
+                                const prevRace = await ErgastAPI.getPreviousYearRace(race.Circuit.circuitId, parseInt(race.season, 10));
+                                results = prevRace?.Results || null;
+                            } catch (err) {
+                                console.log(`No previous year results for ${race.raceName}`);
+                            }
                         }
-                    }
 
-                    racesWithData.push({ ...race, results, isPast });
-                }
+                        return { ...race, results, isPast };
+                    })
+                );
 
                 setSchedule(racesWithData);
                 setLoading(false);
@@ -338,14 +339,14 @@ const Header = ({ activeTab, setActiveTab }) => (
                         <button
                             key={tab.name}
                             onClick={() => setActiveTab(tab.name)}
-                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center ${
+                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center whitespace-nowrap ${
                                 activeTab === tab.name
                                     ? 'bg-red-600 text-white'
                                     : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                             }`}
                         >
                             {tab.icon}
-                            <span>{tab.name}</span>
+                            <span className="whitespace-nowrap">{tab.name}</span>
                         </button>
                     ))}
                 </nav>
@@ -567,9 +568,9 @@ const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, las
                                                 </div>
                                             </div>
                                             <img
-                                                src={getTeamLogoUrl(result.Constructor.constructorId)}
+                                                src={getTeamLogoUrl(result.Constructor.constructorId, 96, { fullColor: true })}
                                                 alt={result.Constructor.name}
-                                                className="w-14 h-14 ml-3 rounded opacity-90 object-contain"
+                                                className="w-16 h-16 ml-3 rounded object-contain"
                                             />
                                         </div>
                                     </div>
@@ -761,6 +762,8 @@ const DriverStandingsCard = ({ standings, loading }) => {
 
     // Load standings for a specific year
     useEffect(() => {
+        // FIX: Removed yearStandings from dependency array to prevent infinite loop
+        // Only check if we need to fetch, don't re-run when yearStandings changes
         if (!yearStandings[selectedYear]) {
             setLoadingYear(true);
             ErgastAPI.getDriverStandings(selectedYear)
@@ -773,14 +776,17 @@ const DriverStandingsCard = ({ standings, loading }) => {
                     setLoadingYear(false);
                 });
         }
-    }, [selectedYear, yearStandings]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedYear]);
 
     // Initialize current year standings from props
     useEffect(() => {
+        // FIX: Removed yearStandings from dependency to prevent infinite loop
         if (standings && standings.length > 0 && !yearStandings[2025]) {
             setYearStandings(prev => ({ ...prev, 2025: standings }));
         }
-    }, [standings, yearStandings]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [standings]);
 
     const currentStandings = yearStandings[selectedYear] || [];
     const isLoading = loading || loadingYear;
@@ -1649,7 +1655,7 @@ const ConstructorStandingsCard = ({ standings, loading }) => {
                                 </div>
                                 <div
                                     className="w-12 h-12 rounded-full flex items-center justify-center p-2 flex-shrink-0"
-                                    style={{ backgroundColor: teamColor }}
+                                    style={{ backgroundColor: `${teamColor}20` }}
                                 >
                                     {teamLogoUrl ? (
                                         <img
@@ -1739,7 +1745,7 @@ const ConstructorStandingsCard = ({ standings, loading }) => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="w-8 h-8 rounded-full flex items-center justify-center p-1.5 mr-3"
-                                                    style={{ backgroundColor: teamColor }}>
+                                                    style={{ backgroundColor: `${teamColor}20` }}>
                                                     {getTeamLogoUrl(standing.Constructor.constructorId) ? (
                                                         <img
                                                             src={getTeamLogoUrl(standing.Constructor.constructorId)}
@@ -1805,6 +1811,8 @@ const LapTimeChart = ({ race }) => {
     const [showDropdown, setShowDropdown] = useState(false);
 
     useEffect(() => {
+        let cancelled = false; // FIX: Prevent race conditions from stale fetches
+
         const fetchLapTimes = async () => {
             if (!race.isPast || !race.results) return;
 
@@ -1825,33 +1833,45 @@ const LapTimeChart = ({ race }) => {
             setLoadingProgress({ current: 0, total: driversToFetch.length });
 
             try {
+                // Fetch lap times (tries OpenF1 first for instant loading, falls back to Ergast)
+                const driverIds = driversToFetch.map(d => d.driver.driverId);
+                const results = await ErgastAPI.getLapTimesBatch(
+                    race.season,
+                    race.round,
+                    driverIds,
+                    (current, total) => {
+                        if (!cancelled) { // Only update if not cancelled
+                            setLoadingProgress({ current, total });
+                        }
+                    },
+                    race.results // Pass race results for driver mapping
+                );
+
+                // FIX: Don't update state if the component has moved on to another race
+                if (cancelled) return;
+
                 const driverLaps = [];
 
-                // Fetch lap times sequentially with delay to avoid rate limiting
-                for (let i = 0; i < driversToFetch.length; i++) {
-                    const entry = driversToFetch[i];
-                    setLoadingProgress({ current: i + 1, total: driversToFetch.length });
+                // Process results and match them back to driversToFetch
+                results.forEach((result, index) => {
+                    const entry = driversToFetch[index];
 
-                    try {
-                        const laps = await ErgastAPI.getLapTimes(race.season, race.round, entry.driver.driverId);
-                        if (laps && laps.length > 0) {
-                            entry.laps = laps;
-                            entry.hasLapData = true;
-                            driverLaps.push({
-                                driver: entry.driver,
-                                constructor: entry.constructor,
-                                laps: laps
-                            });
-                        }
-                    } catch (err) {
-                        console.warn(`No lap data for ${entry.driver.familyName}`);
+                    if (result.laps && result.laps.length > 0) {
+                        entry.laps = result.laps;
+                        entry.hasLapData = true;
+                        entry.lapError = result.error;
+                        driverLaps.push({
+                            driver: entry.driver,
+                            constructor: entry.constructor,
+                            laps: result.laps,
+                            error: result.error
+                        });
+                    } else {
+                        entry.hasLapData = false;
+                        entry.lapError = result.error || (result.total === 0 ? 'no_data' : 'unknown');
+                        console.warn(`No lap data for ${entry.driver.familyName} (${entry.driver.code}): ${entry.lapError}`);
                     }
-
-                    // Add delay between requests to avoid rate limiting (200ms)
-                    if (i < driversToFetch.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                    }
-                }
+                });
 
                 setLapData(driverLaps);
                 setDriverOptions(driversToFetch);
@@ -1860,13 +1880,22 @@ const LapTimeChart = ({ race }) => {
                 const autoSelectCount = Math.min(5, driverLaps.length);
                 setSelectedDrivers(driverLaps.slice(0, autoSelectCount).map(d => d.driver.driverId));
             } catch (err) {
-                console.error('Error fetching lap times:', err);
+                if (!cancelled) {
+                    console.error('Error fetching lap times:', err);
+                }
             } finally {
-                setLoading(false);
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         };
 
         fetchLapTimes();
+
+        // Cleanup function to cancel stale fetches
+        return () => {
+            cancelled = true;
+        };
     }, [race.season, race.round, race.isPast]);
 
     const toggleDriver = (driverId) => {
