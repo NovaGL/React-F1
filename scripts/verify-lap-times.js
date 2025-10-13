@@ -44,6 +44,7 @@ async function verifyLapTimes({ season, driverId }) {
   }
 
   const missing = [];
+  const anomalies = [];
 
   for (const race of completedRounds) {
     try {
@@ -52,6 +53,21 @@ async function verifyLapTimes({ season, driverId }) {
       console.log(`Round ${race.round.padStart?.(2, '0') ?? race.round} - ${race.raceName}: ${lapCount} laps`);
       if (lapCount === 0) {
         missing.push({ round: race.round, name: race.raceName });
+        continue;
+      }
+
+      const lapNumbers = laps.map((lap) => lap?.lap).filter((lap) => Number.isFinite(lap));
+      const uniqueLapNumbers = new Set(lapNumbers);
+      const hasDuplicates = uniqueLapNumbers.size !== lapNumbers.length;
+      const isSorted = lapNumbers.every((lap, index) => index === 0 || lap > lapNumbers[index - 1]);
+
+      if (hasDuplicates || !isSorted) {
+        anomalies.push({
+          round: race.round,
+          name: race.raceName,
+          duplicates: hasDuplicates,
+          sorted: isSorted,
+        });
       }
     } catch (error) {
       console.error(`Failed to fetch lap times for round ${race.round}:`, error);
@@ -65,8 +81,19 @@ async function verifyLapTimes({ season, driverId }) {
       console.error(` - Round ${race.round}: ${race.name}${race.error ? ' (fetch error)' : ''}`);
     });
     process.exitCode = 1;
+  }
+
+  if (anomalies.length > 0) {
+    console.error('\nLap data ordering issues detected:');
+    anomalies.forEach((race) => {
+      const problems = [];
+      if (race.duplicates) problems.push('duplicate laps');
+      if (!race.sorted) problems.push('out of order');
+      console.error(` - Round ${race.round}: ${race.name} (${problems.join(', ')})`);
+    });
+    process.exitCode = 1;
   } else {
-    console.log('\nAll completed rounds have lap data for the selected driver.');
+    console.log('\nAll completed rounds have orderly lap data for the selected driver.');
   }
 }
 

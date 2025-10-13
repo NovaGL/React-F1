@@ -7,6 +7,7 @@ import {
   getTeamColor as resolveTeamColor,
   getTeamLogoUrl as resolveTeamLogoUrl
 } from './theme.js';
+import { getLapTimesFromOpenF1 } from './openf1-api.js';
 
 const ERGAST_BASE_URL = 'https://api.jolpi.ca/ergast/f1';
 
@@ -16,7 +17,8 @@ const cache = new Map();
 const MIN_REQUEST_INTERVAL = 750; // ms between calls to avoid bursts
 const MAX_RETRY_ATTEMPTS = 3;
 const BASE_RETRY_DELAY = 1000; // ms
-const LAP_TIME_PAGE_SIZE = 200;
+const RACE_LAP_PAGE_SIZE = 2000;
+const RACE_LAP_CACHE_DURATION = 3600000;
 let lastRequestTimestamp = 0;
 
 const NETWORK_UNREACHABLE_CODES = new Set(['ENETUNREACH', 'EHOSTUNREACH']);
@@ -25,6 +27,102 @@ function isNetworkUnreachable(error) {
   if (!error) return false;
   const code = error.code || error?.cause?.code;
   return code ? NETWORK_UNREACHABLE_CODES.has(code) : false;
+}
+
+function parseLapNumber(value) {
+  const parsed = Number.parseInt(typeof value === 'string' ? value.trim() : value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizeLapTimeString(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const match = trimmed.match(/^(\d+):(\d{1,2})(?:\.(\d{1,3}))?$/);
+  if (!match) {
+    return null;
+  }
+
+  const minutes = Number.parseInt(match[1], 10);
+  const seconds = Number.parseInt(match[2], 10);
+  const millis = match[3] || '0';
+
+  if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+    return null;
+  }
+
+  const normalizedSeconds = seconds.toString().padStart(2, '0');
+  const normalizedMillis = millis.padEnd(3, '0').slice(0, 3);
+
+  return `${minutes}:${normalizedSeconds}.${normalizedMillis}`;
+}
+
+function lapTimeToMillis(time) {
+  const match = time.match(/^(\d+):(\d{2})\.(\d{3})$/);
+  if (!match) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const minutes = Number.parseInt(match[1], 10);
+  const seconds = Number.parseInt(match[2], 10);
+  const millis = Number.parseInt(match[3], 10);
+
+  if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || !Number.isFinite(millis)) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return minutes * 60000 + seconds * 1000 + millis;
+}
+
+function normalizeLapSeries(laps) {
+  if (!Array.isArray(laps) || laps.length === 0) {
+    return [];
+  }
+
+  const byLapNumber = new Map();
+
+  for (const entry of laps) {
+    if (!entry) continue;
+
+    const lapNumber =
+      parseLapNumber(entry.lap ?? entry.lapNumber ?? entry.number ?? entry?.Timing?.lap);
+    const rawTime =
+      typeof entry.time === 'string'
+        ? entry.time
+        : typeof entry?.Timing?.time === 'string'
+          ? entry.Timing.time
+          : typeof entry?.Time?.time === 'string'
+            ? entry.Time.time
+            : null;
+
+    const normalizedTime = normalizeLapTimeString(rawTime);
+
+    if (lapNumber == null || !normalizedTime) {
+      continue;
+    }
+
+    const candidate = { lap: lapNumber, time: normalizedTime };
+    if (!byLapNumber.has(lapNumber)) {
+      byLapNumber.set(lapNumber, candidate);
+    } else {
+      const existing = byLapNumber.get(lapNumber);
+      if (lapTimeToMillis(candidate.time) < lapTimeToMillis(existing.time)) {
+        byLapNumber.set(lapNumber, candidate);
+      }
+    }
+  }
+
+  return Array.from(byLapNumber.values()).sort((a, b) => a.lap - b.lap);
+}
+
+function cloneLapSeries(laps) {
+  return Array.isArray(laps) ? laps.map((lap) => ({ ...lap })) : [];
 }
 
 let execFileAsync;
@@ -229,80 +327,173 @@ export async function getSprintResults(year, round) {
   const data = await fetchWithCache(url, `sprint-${year}-${round}`, 3600000);
   return data.MRData.RaceTable.Races[0];
 }
+const raceLapAggregationCache = new Map();
+const raceLapPromiseCache = new Map();
+
+function buildRaceLapCacheKey(season, round) {
+  return `race-lap-${season}-${round}`;
+}
+
+async function fetchRaceLapPage(season, round, offset) {
+  const url = `${ERGAST_BASE_URL}/${season}/${round}/laps.json?limit=${RACE_LAP_PAGE_SIZE}&offset=${offset}`;
+
+  try {
+    const response = await fetchWithRateLimit(url);
+    const data = await response.json();
+    const total = Number.parseInt(data?.MRData?.total ?? '0', 10);
+    const laps = data?.MRData?.RaceTable?.Races?.[0]?.Laps ?? [];
+
+    return {
+      laps: Array.isArray(laps) ? laps : [],
+      total: Number.isFinite(total) ? total : null,
+      success: true,
+    };
+  } catch (error) {
+    console.error(`Error fetching aggregated lap data for round ${round} (offset ${offset}):`, error);
+    return {
+      laps: [],
+      total: null,
+      success: false,
+    };
+  }
+}
+
+async function loadRaceLapAggregation(season, round) {
+  const raceCacheKey = buildRaceLapCacheKey(season, round);
+  const cached = raceLapAggregationCache.get(raceCacheKey);
+  if (cached && Date.now() - cached.timestamp < RACE_LAP_CACHE_DURATION) {
+    return cached.data;
+  }
+
+  if (raceLapPromiseCache.has(raceCacheKey)) {
+    return raceLapPromiseCache.get(raceCacheKey);
+  }
+
+  const aggregationPromise = (async () => {
+    const driverLapMap = new Map();
+    let offset = 0;
+    let totalEntries = null;
+    let processedEntries = 0;
+    let hadSuccessfulPage = false;
+
+    while (totalEntries === null || offset < totalEntries) {
+      const { laps, total, success } = await fetchRaceLapPage(season, round, offset);
+
+      if (!success) {
+        break;
+      }
+
+      hadSuccessfulPage = true;
+      if (totalEntries === null && total != null) {
+        totalEntries = total;
+      }
+
+      if (laps.length === 0) {
+        break;
+      }
+
+      for (const lap of laps) {
+        const lapNumber = Number.parseInt(lap?.number ?? '', 10);
+        if (!Number.isFinite(lapNumber)) {
+          continue;
+        }
+
+        const timings = Array.isArray(lap?.Timings) ? lap.Timings : [];
+        for (const timing of timings) {
+          const driverKey = timing?.driverId;
+          const time = timing?.time;
+          if (!driverKey || !time) {
+            continue;
+          }
+
+          if (!driverLapMap.has(driverKey)) {
+            driverLapMap.set(driverKey, []);
+          }
+
+          driverLapMap.get(driverKey).push({ lap: lapNumber, time });
+          processedEntries += 1;
+        }
+      }
+
+      offset += RACE_LAP_PAGE_SIZE;
+
+      if (totalEntries != null && processedEntries >= totalEntries) {
+        break;
+      }
+    }
+
+    if (!hadSuccessfulPage || driverLapMap.size === 0) {
+      return null;
+    }
+
+    const normalizedMap = new Map();
+    for (const [driverKey, laps] of driverLapMap.entries()) {
+      const normalized = normalizeLapSeries(laps);
+      if (normalized.length > 0) {
+        normalizedMap.set(driverKey, normalized);
+      }
+    }
+
+    if (normalizedMap.size === 0) {
+      return null;
+    }
+
+    const cacheEntry = {
+      data: normalizedMap,
+      timestamp: Date.now(),
+    };
+
+    raceLapAggregationCache.set(raceCacheKey, cacheEntry);
+    return normalizedMap;
+  })()
+    .catch((error) => {
+      console.error(`Failed to aggregate lap data for ${season} round ${round}:`, error);
+      return null;
+    })
+    .finally(() => {
+      raceLapPromiseCache.delete(raceCacheKey);
+    });
+
+  raceLapPromiseCache.set(raceCacheKey, aggregationPromise);
+  return aggregationPromise;
+}
+
 // Get lap times for a specific driver in a race
 export async function getLapTimes(season, round, driverId) {
   const cacheKey = `lap-times-${season}-${round}-${driverId}`;
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < 3600000) {
-    return cached.data;
+    return cloneLapSeries(cached.data);
   }
 
-  const parseLapResponse = (data) => {
-    const race = data?.MRData?.RaceTable?.Races?.[0];
-    if (!race || !race.Laps) return [];
+  const raceAggregation = await loadRaceLapAggregation(season, round);
 
-    return race.Laps.map((lap) => ({
-      lap: lap.number,
-      time: lap.Timings[0].time,
-    }));
-  };
-
-  const fetchLapPage = async (offset) => {
-    const url = `${ERGAST_BASE_URL}/${season}/${round}/drivers/${driverId}/laps.json?limit=${LAP_TIME_PAGE_SIZE}&offset=${offset}`;
-
-    try {
-      const response = await fetchWithRateLimit(url);
-      const data = await response.json();
-      const total = parseInt(data?.MRData?.total ?? '0', 10);
-      return {
-        laps: parseLapResponse(data),
-        total: Number.isNaN(total) ? 0 : total,
-        success: true,
-      };
-    } catch (error) {
-      console.error(`Error fetching lap times for ${driverId} round ${round} (offset ${offset}):`, error);
-      return {
-        laps: [],
-        total: null,
-        success: false,
-      };
-    }
-  };
-
-  const aggregatedLaps = [];
-  let totalLaps = null;
-  let offset = 0;
-  let hadSuccessfulPage = false;
-
-  while (totalLaps === null || offset < totalLaps) {
-    const { laps, total, success } = await fetchLapPage(offset);
-
-    if (!success) {
-      break;
+  if (raceAggregation) {
+    const now = Date.now();
+    for (const [driverKey, laps] of raceAggregation.entries()) {
+      const driverCacheKey = `lap-times-${season}-${round}-${driverKey}`;
+      cache.set(driverCacheKey, { data: cloneLapSeries(laps), timestamp: now });
     }
 
-    hadSuccessfulPage = true;
-    if (totalLaps === null) {
-      totalLaps = total;
-    }
-
-    if (laps.length === 0) {
-      break;
-    }
-
-    aggregatedLaps.push(...laps);
-    offset += LAP_TIME_PAGE_SIZE;
-
-    if (aggregatedLaps.length >= totalLaps) {
-      break;
+    if (raceAggregation.has(driverId)) {
+      return cloneLapSeries(raceAggregation.get(driverId));
     }
   }
 
-  if (hadSuccessfulPage) {
-    cache.set(cacheKey, { data: aggregatedLaps, timestamp: Date.now() });
+  try {
+    const fallbackLaps = await getLapTimesFromOpenF1(season, round, driverId);
+    const normalizedFallback = normalizeLapSeries(fallbackLaps);
+    if (normalizedFallback.length > 0) {
+      cache.set(cacheKey, { data: normalizedFallback, timestamp: Date.now() });
+      return cloneLapSeries(normalizedFallback);
+    }
+  } catch (error) {
+    console.warn(`OpenF1 fallback failed for ${season} round ${round}:`, error);
   }
 
-  return aggregatedLaps;
+  const empty = [];
+  cache.set(cacheKey, { data: empty, timestamp: Date.now() });
+  return empty;
 }
 
 // Get fastest laps for a specific race
