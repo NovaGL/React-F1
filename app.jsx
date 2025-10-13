@@ -382,26 +382,7 @@ const useNextRace = () => {
     };
 
     if (loading) {
-        return (
-            <div className="text-gray-400 text-center py-8">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="relative w-16 h-16">
-                        <div className="absolute inset-0 border-4 border-gray-700 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-                    </div>
-                    <div>
-                        <div className="text-white font-semibold mb-1">Loading lap time data...</div>
-                        <div className="text-sm text-gray-500">
-                        </div>
-                        <div className="w-64 h-2 bg-gray-700 rounded-full mt-2 overflow-hidden">
-                            <div
-                                className="h-full bg-red-500 transition-all duration-300"
-                            ></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+        return <LoadingSpinner message="Loading lap time data..." subtext="Fetching race timing snapshots." />;
     }
 
     if (lapData.length === 0) {
@@ -529,17 +510,16 @@ const useNextRace = () => {
         })
         : availableDrivers;
 
-    const driversWithoutData = driverOptions.filter(d => !d.hasLapData);
-    const selectedWithoutData = selectedDriversData.filter(d => !d.hasLapData);
 
     return (
         <div className="mt-6">
             <h4 className="text-md font-semibold text-white mb-3 flex items-center gap-2">
-                <span>📊</span> Lap Time Analysis
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: "#E10600" }} aria-hidden="true">
+                    🏎️
+                </span>
+                <span>Lap Time Analysis</span>
             </h4>
-
-            {/* Tag Picker */}
-            <div className="relative mb-4">
+            <div className="relative">
                 <div className="bg-gray-900/80 border border-gray-600 rounded-lg p-2 focus-within:border-red-500 transition-colors">
                     <div className="flex flex-wrap gap-2">
                         {/* Selected Driver Tags */}
@@ -563,7 +543,7 @@ const useNextRace = () => {
                                         />
                                     </div>
                                     <span className="text-sm font-medium text-white">
-                                        `${driverData.driver.givenName} ${driverData.driver.familyName}`
+                                        {driverData.driver.givenName} {driverData.driver.familyName}
                                     </span>
                                     {!driverData.hasLapData && (
                                         <span className="text-[10px] uppercase tracking-wide text-yellow-400 bg-yellow-500/10 border border-yellow-500/40 rounded px-1 py-0.5">
@@ -635,18 +615,6 @@ const useNextRace = () => {
                     </div>
                 )}
             </div>
-
-            {driversWithoutData.length > 0 && (
-                <p className="mt-2 text-xs text-yellow-400">
-                    Lap time data is not provided by the API for {driversWithoutData.length} of the top drivers. They remain selectable but will be noted as unavailable.
-                </p>
-            )}
-
-            {selectedWithoutData.length > 0 && (
-                <div className="mt-2 text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
-                    {selectedWithoutData.length === 1 ? 'Lap data is unavailable for the selected driver.' : 'Lap data is unavailable for some of the selected drivers.'}
-                </div>
-            )}
 
             {/* Chart */}
             {selectedDrivers.length === 0 ? (
@@ -1047,21 +1015,9 @@ const RaceCalendarEnhanced = ({ schedule, loading }) => {
     };
 
     if (loading) {
-        return (
-            <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
-                <div className="p-10 flex flex-col items-center justify-center text-gray-300">
-                    <div className="relative w-16 h-16 mb-4">
-                        <div className="absolute inset-0 border-4 border-gray-700 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-t-red-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-                    </div>
-                    <div className="text-lg font-semibold text-white">Loading race calendar…</div>
-                    <p className="text-sm text-gray-400 mt-2 text-center max-w-xs">
-                        Fetching the latest schedule and results from the Ergast API.
-                    </p>
-                </div>
-            </div>
-        );
+        return <LoadingSpinner message="Loading race calendar..." subtext="Fetching the latest schedule and results from the Ergast API." />;
     }
+
     if (schedule.length === 0) return <div className="text-center p-8 text-gray-400">No races available</div>;
 
     return (
