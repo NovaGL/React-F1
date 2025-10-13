@@ -29,6 +29,102 @@ function isNetworkUnreachable(error) {
   return code ? NETWORK_UNREACHABLE_CODES.has(code) : false;
 }
 
+function parseLapNumber(value) {
+  const parsed = Number.parseInt(typeof value === 'string' ? value.trim() : value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizeLapTimeString(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const match = trimmed.match(/^(\d+):(\d{1,2})(?:\.(\d{1,3}))?$/);
+  if (!match) {
+    return null;
+  }
+
+  const minutes = Number.parseInt(match[1], 10);
+  const seconds = Number.parseInt(match[2], 10);
+  const millis = match[3] || '0';
+
+  if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+    return null;
+  }
+
+  const normalizedSeconds = seconds.toString().padStart(2, '0');
+  const normalizedMillis = millis.padEnd(3, '0').slice(0, 3);
+
+  return `${minutes}:${normalizedSeconds}.${normalizedMillis}`;
+}
+
+function lapTimeToMillis(time) {
+  const match = time.match(/^(\d+):(\d{2})\.(\d{3})$/);
+  if (!match) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const minutes = Number.parseInt(match[1], 10);
+  const seconds = Number.parseInt(match[2], 10);
+  const millis = Number.parseInt(match[3], 10);
+
+  if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || !Number.isFinite(millis)) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return minutes * 60000 + seconds * 1000 + millis;
+}
+
+function normalizeLapSeries(laps) {
+  if (!Array.isArray(laps) || laps.length === 0) {
+    return [];
+  }
+
+  const byLapNumber = new Map();
+
+  for (const entry of laps) {
+    if (!entry) continue;
+
+    const lapNumber =
+      parseLapNumber(entry.lap ?? entry.lapNumber ?? entry.number ?? entry?.Timing?.lap);
+    const rawTime =
+      typeof entry.time === 'string'
+        ? entry.time
+        : typeof entry?.Timing?.time === 'string'
+          ? entry.Timing.time
+          : typeof entry?.Time?.time === 'string'
+            ? entry.Time.time
+            : null;
+
+    const normalizedTime = normalizeLapTimeString(rawTime);
+
+    if (lapNumber == null || !normalizedTime) {
+      continue;
+    }
+
+    const candidate = { lap: lapNumber, time: normalizedTime };
+    if (!byLapNumber.has(lapNumber)) {
+      byLapNumber.set(lapNumber, candidate);
+    } else {
+      const existing = byLapNumber.get(lapNumber);
+      if (lapTimeToMillis(candidate.time) < lapTimeToMillis(existing.time)) {
+        byLapNumber.set(lapNumber, candidate);
+      }
+    }
+  }
+
+  return Array.from(byLapNumber.values()).sort((a, b) => a.lap - b.lap);
+}
+
+function cloneLapSeries(laps) {
+  return Array.isArray(laps) ? laps.map((lap) => ({ ...lap })) : [];
+}
+
 let execFileAsync;
 async function ensureExecFileAsync() {
   if (execFileAsync) {
