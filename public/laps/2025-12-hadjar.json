@@ -1,0 +1,168 @@
+{
+  "season": "2025",
+  "round": "12",
+  "raceName": "British Grand Prix",
+  "driver": {
+    "driverId": "hadjar",
+    "permanentNumber": "6",
+    "code": "HAD",
+    "url": "https://en.wikipedia.org/wiki/Isack_Hadjar",
+    "givenName": "Isack",
+    "familyName": "Hadjar",
+    "dateOfBirth": "2004-09-28",
+    "nationality": "French"
+  },
+  "constructor": {
+    "constructorId": "rb",
+    "url": "http://en.wikipedia.org/wiki/RB_Formula_One_Team",
+    "name": "RB F1 Team",
+    "nationality": "Italian"
+  },
+  "laps": [
+    {
+      "lap": 2,
+      "time": "2:18.715",
+      "duration": 138.715,
+      "sector1": 48.422,
+      "sector2": 52.429,
+      "sector3": 37.864,
+      "isPitLap": false
+    },
+    {
+      "lap": 3,
+      "time": "2:15.981",
+      "duration": 135.981,
+      "sector1": 45.591,
+      "sector2": 51.045,
+      "sector3": 39.345,
+      "isPitLap": false
+    },
+    {
+      "lap": 4,
+      "time": "1:53.542",
+      "duration": 113.542,
+      "sector1": 37.387,
+      "sector2": 42.421,
+      "sector3": 33.734,
+      "isPitLap": false
+    },
+    {
+      "lap": 5,
+      "time": "1:59.848",
+      "duration": 119.848,
+      "sector1": 35.47,
+      "sector2": 45.443,
+      "sector3": 38.935,
+      "isPitLap": false
+    },
+    {
+      "lap": 6,
+      "time": "2:17.761",
+      "duration": 137.761,
+      "sector1": 43.886,
+      "sector2": 54.655,
+      "sector3": 39.22,
+      "isPitLap": false
+    },
+    {
+      "lap": 7,
+      "time": "1:51.751",
+      "duration": 111.751,
+      "sector1": 39.021,
+      "sector2": 40.63,
+      "sector3": 32.1,
+      "isPitLap": false
+    },
+    {
+      "lap": 8,
+      "time": "1:43.759",
+      "duration": 103.759,
+      "sector1": 33.559,
+      "sector2": 38.899,
+      "sector3": 31.301,
+      "isPitLap": false
+    },
+    {
+      "lap": 9,
+      "time": "1:41.705",
+      "duration": 101.705,
+      "sector1": 32.709,
+      "sector2": 38.545,
+      "sector3": 30.451,
+      "isPitLap": false
+    },
+    {
+      "lap": 10,
+      "time": "1:42.691",
+      "duration": 102.691,
+      "sector1": 31.608,
+      "sector2": 43.987,
+      "sector3": 27.096,
+      "isPitLap": false
+    },
+    {
+      "lap": 11,
+      "time": "2:09.977",
+      "duration": 129.977,
+      "sector1": 54.045,
+      "sector2": 45.463,
+      "sector3": 30.469,
+      "isPitLap": true
+    },
+    {
+      "lap": 12,
+      "time": "1:48.339",
+      "duration": 108.339,
+      "sector1": 33.888,
+      "sector2": 44.272,
+      "sector3": 30.179,
+      "isPitLap": false
+    },
+    {
+      "lap": 13,
+      "time": "1:57.216",
+      "duration": 117.216,
+      "sector1": 34.06,
+      "sector2": 47.098,
+      "sector3": 36.058,
+      "isPitLap": false
+    },
+    {
+      "lap": 14,
+      "time": "2:16.377",
+      "duration": 136.377,
+      "sector1": 47.114,
+      "sector2": 53.635,
+      "sector3": 35.628,
+      "isPitLap": false
+    },
+    {
+      "lap": 15,
+      "time": "2:19.641",
+      "duration": 139.641,
+      "sector1": 40.33,
+      "sector2": 57.915,
+      "sector3": 41.396,
+      "isPitLap": false
+    },
+    {
+      "lap": 16,
+      "time": "2:44.362",
+      "duration": 164.362,
+      "sector1": 54.933,
+      "sector2": 65.479,
+      "sector3": 43.95,
+      "isPitLap": false
+    },
+    {
+      "lap": 17,
+      "time": "2:48.551",
+      "duration": 168.551,
+      "sector1": 53.604,
+      "sector2": 64.017,
+      "sector3": 50.93,
+      "isPitLap": false
+    }
+  ],
+  "lapError": null
+}

@@ -1,0 +1,21 @@
+{
+  "season": "2025",
+  "round": "20",
+  "raceName": "Mexico City Grand Prix",
+  "driver": {
+    "driverId": "russell",
+    "permanentNumber": "63",
+    "code": "RUS",
+    "url": "http://en.wikipedia.org/wiki/George_Russell_(racing_driver)",
+    "givenName": "George",
+    "familyName": "Russell",
+    "dateOfBirth": "1998-02-15",
+    "nationality": "British"
+  },
+  "constructor": {
+    "constructorId": "russell",
+    "name": "Unknown"
+  },
+  "laps": [],
+  "lapError": null
+}

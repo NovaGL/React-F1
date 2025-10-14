@@ -1,0 +1,78 @@
+{
+  "season": "2025",
+  "round": "8",
+  "raceName": "Monaco Grand Prix",
+  "driver": {
+    "driverId": "gasly",
+    "permanentNumber": "10",
+    "code": "GAS",
+    "url": "http://en.wikipedia.org/wiki/Pierre_Gasly",
+    "givenName": "Pierre",
+    "familyName": "Gasly",
+    "dateOfBirth": "1996-02-07",
+    "nationality": "French"
+  },
+  "constructor": {
+    "constructorId": "alpine",
+    "url": "http://en.wikipedia.org/wiki/Alpine_F1_Team",
+    "name": "Alpine F1 Team",
+    "nationality": "French"
+  },
+  "laps": [
+    {
+      "lap": 2,
+      "time": "1:48.974",
+      "duration": 108.974,
+      "sector1": 31.384,
+      "sector2": 48.802,
+      "sector3": 28.788,
+      "isPitLap": true
+    },
+    {
+      "lap": 3,
+      "time": "1:48.723",
+      "duration": 108.723,
+      "sector1": 30.81,
+      "sector2": 48.939,
+      "sector3": 28.974,
+      "isPitLap": false
+    },
+    {
+      "lap": 4,
+      "time": "1:31.509",
+      "duration": 91.509,
+      "sector1": 31.667,
+      "sector2": 39.044,
+      "sector3": 20.798,
+      "isPitLap": false
+    },
+    {
+      "lap": 5,
+      "time": "1:18.864",
+      "duration": 78.864,
+      "sector1": 21.094,
+      "sector2": 37.068,
+      "sector3": 20.702,
+      "isPitLap": false
+    },
+    {
+      "lap": 6,
+      "time": "1:18.054",
+      "duration": 78.054,
+      "sector1": 20.587,
+      "sector2": 36.799,
+      "sector3": 20.668,
+      "isPitLap": false
+    },
+    {
+      "lap": 7,
+      "time": "1:19.262",
+      "duration": 79.262,
+      "sector1": 20.844,
+      "sector2": 37.141,
+      "sector3": 21.277,
+      "isPitLap": false
+    }
+  ],
+  "lapError": null
+}

@@ -1805,6 +1805,8 @@ const LapTimeChart = ({ race }) => {
     const [showDropdown, setShowDropdown] = useState(false);
 
     useEffect(() => {
+        let cancelled = false;
+
         const fetchLapTimes = async () => {
             if (!race.isPast || !race.results) return;
 
@@ -1814,10 +1816,75 @@ const LapTimeChart = ({ race }) => {
                 driver: result.Driver,
                 constructor: result.Constructor,
                 laps: [],
-                hasLapData: false
+                hasLapData: false,
+                lapError: null
             }));
 
             const entryMap = new Map(baseDriverEntries.map(entry => [entry.driver.driverId, entry]));
+            const raceKey = `${race.season}-${String(race.round).padStart(2, '0')}`;
+
+            const applyLocalSnapshots = async () => {
+                if (typeof fetch !== 'function') {
+                    return false;
+                }
+
+                try {
+                    const indexResponse = await fetch(`/laps/${raceKey}.json`, { cache: 'force-cache' });
+                    if (!indexResponse.ok) {
+                        return false;
+                    }
+
+                    const indexData = await indexResponse.json();
+                    const driversMeta = Array.isArray(indexData?.drivers) ? indexData.drivers : [];
+
+                    for (const meta of driversMeta) {
+                        if (cancelled) break;
+                        const driverId = meta?.driverId || meta?.driver?.driverId;
+                        if (!driverId) continue;
+
+                        try {
+                            const fileName = meta.file;
+                            if (!fileName) continue;
+
+                            const driverResponse = await fetch(`/laps/${fileName}`, { cache: 'force-cache' });
+                            if (!driverResponse.ok) {
+                                throw new Error(`Missing static lap file ${fileName}`);
+                            }
+
+                            const driverData = await driverResponse.json();
+                            const laps = Array.isArray(driverData?.laps) ? driverData.laps : [];
+
+                            const entry = entryMap.get(driverId) || {
+                                driver: driverData?.driver || meta.driver,
+                                constructor: driverData?.constructor || meta.constructor,
+                                laps: [],
+                                hasLapData: false,
+                                lapError: null
+                            };
+
+                            entry.driver = entry.driver || driverData?.driver || meta.driver;
+                            entry.constructor = entry.constructor || driverData?.constructor || meta.constructor;
+                            entry.laps = laps;
+                            entry.hasLapData = laps.length > 0;
+                            entry.lapError = driverData?.lapError || null;
+
+                            if (!entryMap.has(driverId)) {
+                                entryMap.set(driverId, entry);
+                                baseDriverEntries.push(entry);
+                            }
+                        } catch (error) {
+                            console.warn(`Static lap file error for ${driverId}:`, error);
+                        }
+                    }
+
+                    return driversMeta.length > 0;
+                } catch (error) {
+                    console.warn(`Static lap snapshot unavailable for ${raceKey}:`, error);
+                    return false;
+                }
+            };
+
+            await applyLocalSnapshots();
 
             let priorityStandings = [];
             try {
@@ -1866,12 +1933,14 @@ const LapTimeChart = ({ race }) => {
                 includeEntry(entry);
             }
 
-            setLoadingProgress({ current: 0, total: driversToFetch.length });
+            const entriesNeedingFetch = driversToFetch.filter(entry => !entry.hasLapData);
+            setLoadingProgress({ current: 0, total: entriesNeedingFetch.length });
 
             try {
-                for (let i = 0; i < driversToFetch.length; i++) {
-                    const entry = driversToFetch[i];
-                    setLoadingProgress({ current: i + 1, total: driversToFetch.length });
+                for (let i = 0; i < entriesNeedingFetch.length; i++) {
+                    if (cancelled) break;
+                    const entry = entriesNeedingFetch[i];
+                    setLoadingProgress({ current: i + 1, total: entriesNeedingFetch.length });
 
                     try {
                         const laps = await ErgastAPI.getLapTimes(race.season, race.round, entry.driver.driverId);
@@ -1883,16 +1952,19 @@ const LapTimeChart = ({ race }) => {
                         console.warn(`No lap data for ${entry.driver.familyName}`);
                     }
 
-                    if (i < driversToFetch.length - 1) {
+                    if (i < entriesNeedingFetch.length - 1) {
                         await new Promise(resolve => setTimeout(resolve, 200));
                     }
                 }
 
-                setLapData(baseDriverEntries.filter(entry => entry.hasLapData));
-                setDriverOptions(baseDriverEntries);
+                if (cancelled) return;
+
                 const driversWithDataIds = baseDriverEntries
                     .filter(entry => entry.hasLapData)
                     .map(entry => entry.driver.driverId);
+
+                setLapData(baseDriverEntries.filter(entry => entry.hasLapData));
+                setDriverOptions(baseDriverEntries);
                 setAllDrivers(driversWithDataIds);
 
                 const autoSelect = driversToFetch
@@ -1902,14 +1974,23 @@ const LapTimeChart = ({ race }) => {
                 const fallbackSelection = autoSelect.length > 0 ? autoSelect : driversWithDataIds.slice(0, 1);
                 setSelectedDrivers(fallbackSelection);
             } catch (err) {
-                console.error('Error fetching lap times:', err);
+                if (!cancelled) {
+                    console.error('Error fetching lap times:', err);
+                }
             } finally {
-                setLoading(false);
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         };
 
         fetchLapTimes();
-    }, [race.season, race.round, race.isPast]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [race.isPast, race.results, race.round, race.season]);
+
 
     const toggleDriver = (driverId) => {
         setSelectedDrivers(prev => 
@@ -1943,7 +2024,7 @@ const LapTimeChart = ({ race }) => {
                         <div className="w-64 h-2 bg-gray-700 rounded-full mt-2 overflow-hidden">
                             <div
                                 className="h-full bg-red-500 transition-all duration-300"
-                                style={{ width: `${(loadingProgress.current / loadingProgress.total) * 100}%` }}
+                                style={{ width: `${loadingProgress.total > 0 ? (loadingProgress.current / loadingProgress.total) * 100 : 0}%` }}
                             ></div>
                         </div>
                     </div>
@@ -1975,8 +2056,8 @@ const LapTimeChart = ({ race }) => {
                 borderColor: teamColor,
                 backgroundColor: teamColor + '20',
                 borderWidth: 2,
-                pointRadius: 0,
-                pointHoverRadius: 4,
+                pointRadius: 2.5,
+                pointHoverRadius: 5,
                 tension: 0.1
             };
         })
