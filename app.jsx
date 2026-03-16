@@ -14,6 +14,8 @@ import { getNationalityFlag, normalizeNationality } from './nationality-flags';
 import { Line, Bar } from 'react-chartjs-2';
 import { LAP_TIME_DRIVER_LIMIT } from './config';
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 // Reusable driver image error handler to prevent infinite reload loops
 const handleDriverImageError = (e, driver, teamColor) => {
     const attempt = parseInt(e.target.getAttribute('data-fallback-attempt') || '0');
@@ -676,14 +678,14 @@ const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, las
 
 // Enhanced Driver Standings Component with Multi-Year Tabs
 const DriverStandingsCard = ({ standings, loading }) => {
-    const [selectedYear, setSelectedYear] = useState(2025);
+    const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
     const [yearStandings, setYearStandings] = useState({});
     const [loadingYear, setLoadingYear] = useState(false);
     const [expandedDriver, setExpandedDriver] = useState(null);
     // cache summaries by driverId: { loading: bool, text: string|null, wikiUrl: string|null }
     const [driverSummaries, setDriverSummaries] = useState({});
 
-    const years = [2025, 2024, 2023];
+    const years = Array.from({ length: 3 }, (_, i) => CURRENT_YEAR - i);
 
     // When a driver is expanded, fetch a short summary (Wikipedia) if we don't have it cached
     useEffect(() => {
@@ -777,8 +779,8 @@ const DriverStandingsCard = ({ standings, loading }) => {
 
     // Initialize current year standings from props
     useEffect(() => {
-        if (standings && standings.length > 0 && !yearStandings[2025]) {
-            setYearStandings(prev => ({ ...prev, 2025: standings }));
+        if (standings && standings.length > 0 && !yearStandings[CURRENT_YEAR]) {
+            setYearStandings(prev => ({ ...prev, [CURRENT_YEAR]: standings }));
         }
     }, [standings, yearStandings]);
 
@@ -813,6 +815,14 @@ const DriverStandingsCard = ({ standings, loading }) => {
                     ))}
                 </div>
             </div>
+
+            {/* Empty state when year has no data */}
+            {!isLoading && currentStandings.length === 0 && (
+                <div className="text-center p-8 text-gray-400">
+                    <div className="text-lg font-semibold text-gray-300">No data available for {selectedYear}</div>
+                    <div className="text-sm mt-1">The season may not have started yet or data is unavailable.</div>
+                </div>
+            )}
 
             {/* Mobile-friendly compact view */}
             <div className="block sm:hidden space-y-3 px-4 pb-4">
@@ -1417,10 +1427,11 @@ const ConstructorDetails = ({ standing, teamColor }) => {
     useEffect(() => {
         const fetchTeamData = async () => {
             try {
-                const [driverStandings, current2025, previous2024] = await Promise.all([
+                const prevYear = CURRENT_YEAR - 1;
+                const [driverStandings, currentYearData, previousYearData] = await Promise.all([
                     ErgastAPI.getDriverStandings(),
-                    ErgastAPI.getConstructorStandings(2025),
-                    ErgastAPI.getConstructorStandings(2024)
+                    ErgastAPI.getConstructorStandings(CURRENT_YEAR),
+                    ErgastAPI.getConstructorStandings(prevYear)
                 ]);
 
                 const teamDrivers = driverStandings.filter(
@@ -1429,14 +1440,16 @@ const ConstructorDetails = ({ standing, teamColor }) => {
                 setDrivers(teamDrivers);
 
                 // Get year comparison data
-                const team2025 = current2025.find(t => t.Constructor.constructorId === standing.Constructor.constructorId);
-                const team2024 = previous2024.find(t => t.Constructor.constructorId === standing.Constructor.constructorId);
+                const teamCurrent = currentYearData.find(t => t.Constructor.constructorId === standing.Constructor.constructorId);
+                const teamPrevious = previousYearData.find(t => t.Constructor.constructorId === standing.Constructor.constructorId);
 
                 setYearComparison({
-                    wins2025: parseInt(team2025?.wins || 0),
-                    wins2024: parseInt(team2024?.wins || 0),
-                    points2025: parseInt(team2025?.points || 0),
-                    points2024: parseInt(team2024?.points || 0)
+                    currentYear: CURRENT_YEAR,
+                    prevYear,
+                    winsCurrent: parseInt(teamCurrent?.wins || 0),
+                    winsPrevious: parseInt(teamPrevious?.wins || 0),
+                    pointsCurrent: parseInt(teamCurrent?.points || 0),
+                    pointsPrevious: parseInt(teamPrevious?.points || 0)
                 });
             } catch (error) {
                 console.error('Error fetching team data:', error);
@@ -1452,10 +1465,10 @@ const ConstructorDetails = ({ standing, teamColor }) => {
     }
 
     const winsChartData = yearComparison ? {
-        labels: ['2024', '2025'],
+        labels: [`${yearComparison.prevYear}`, `${yearComparison.currentYear}`],
         datasets: [{
             label: 'Race Wins',
-            data: [yearComparison.wins2024, yearComparison.wins2025],
+            data: [yearComparison.winsPrevious, yearComparison.winsCurrent],
             backgroundColor: [darkenColor(teamColor), teamColor],
             borderColor: [darkenColor(teamColor), teamColor],
             borderWidth: 2
@@ -1463,10 +1476,10 @@ const ConstructorDetails = ({ standing, teamColor }) => {
     } : null;
 
     const pointsChartData = yearComparison ? {
-        labels: ['2024', '2025'],
+        labels: [`${yearComparison.prevYear}`, `${yearComparison.currentYear}`],
         datasets: [{
             label: 'Points',
-            data: [yearComparison.points2024, yearComparison.points2025],
+            data: [yearComparison.pointsPrevious, yearComparison.pointsCurrent],
             backgroundColor: [darkenColor(teamColor), teamColor],
             borderColor: [darkenColor(teamColor), teamColor],
             borderWidth: 2
@@ -1534,10 +1547,10 @@ const ConstructorDetails = ({ standing, teamColor }) => {
                             <Bar data={winsChartData} options={chartOptions} />
                         </div>
                         <div className="mt-3 text-xs text-gray-400 text-center">
-                            {yearComparison.wins2025 > yearComparison.wins2024 ? (
-                                <span className="text-green-400"> +{yearComparison.wins2025 - yearComparison.wins2024} wins vs last year</span>
-                            ) : yearComparison.wins2025 < yearComparison.wins2024 ? (
-                                <span className="text-red-400"> {yearComparison.wins2024 - yearComparison.wins2025} fewer wins vs last year</span>
+                            {yearComparison.winsCurrent > yearComparison.winsPrevious ? (
+                                <span className="text-green-400"> +{yearComparison.winsCurrent - yearComparison.winsPrevious} wins vs last year</span>
+                            ) : yearComparison.winsCurrent < yearComparison.winsPrevious ? (
+                                <span className="text-red-400"> {yearComparison.winsPrevious - yearComparison.winsCurrent} fewer wins vs last year</span>
                             ) : (
                                 <span className="text-gray-400"> Same as last year</span>
                             )}
@@ -1552,10 +1565,10 @@ const ConstructorDetails = ({ standing, teamColor }) => {
                             <Bar data={pointsChartData} options={chartOptions} />
                         </div>
                         <div className="mt-3 text-xs text-gray-400 text-center">
-                            {yearComparison.points2025 > yearComparison.points2024 ? (
-                                <span className="text-green-400"> +{yearComparison.points2025 - yearComparison.points2024} points vs last year</span>
-                            ) : yearComparison.points2025 < yearComparison.points2024 ? (
-                                <span className="text-red-400"> {yearComparison.points2024 - yearComparison.points2025} fewer points vs last year</span>
+                            {yearComparison.pointsCurrent > yearComparison.pointsPrevious ? (
+                                <span className="text-green-400"> +{yearComparison.pointsCurrent - yearComparison.pointsPrevious} points vs last year</span>
+                            ) : yearComparison.pointsCurrent < yearComparison.pointsPrevious ? (
+                                <span className="text-red-400"> {yearComparison.pointsPrevious - yearComparison.pointsCurrent} fewer points vs last year</span>
                             ) : (
                                 <span className="text-gray-400"> Same as last year</span>
                             )}
@@ -2703,7 +2716,7 @@ const RaceCalendarEnhanced = ({ schedule, loading }) => {
         <div className="bg-gray-800/50 rounded-lg shadow-xl overflow-hidden">
             <div className="p-6">
                 <h2 className="text-2xl font-bold text-white flex items-center mb-4">
-                    <CalendarIcon /> 2025 Race Calendar
+                    <CalendarIcon /> {CURRENT_YEAR} Race Calendar
                 </h2>
 
                 {/* Filter Tabs */}

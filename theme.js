@@ -17,6 +17,7 @@ export const TEAM_COLORS = {
   racing_bulls: '#6C98FF', // Alias for RB
   sauber: '#01C00E', // Official 2025: Bright green
   kick_sauber: '#01C00E', // Kick Sauber green
+  audi: '#BB0A21', // Audi F1 (from 2026, replacing Sauber)
   alfa_romeo: '#900000', // Legacy support
   alphatauri: '#2B4562', // Legacy support
   renault: '#FFED00', // Legacy support
@@ -31,6 +32,7 @@ export const TEAM_LOGOS = {
   mercedes: 'https://cdn.brandfetch.io/idsWGwlSmy/theme/light/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1728451883920',
   sauber: 'https://www.f1manager.com/_nuxt/img/sauber.b72322a.svg',
   kick_sauber: 'https://www.f1manager.com/_nuxt/img/sauber.b72322a.svg',
+  audi: 'https://cdn.brandfetch.io/idBLhp1YWf/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX',
   alpine:
     'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NzcuNTggMjQwLjI4Ij4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjZmZmOwogICAgICB9CiAgICA8L3N0eWxlPgogIDwvZGVmcz4KICA8cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik03My45NSwyNDAuMjRsNjQuMjIsLjA1LDY4Ljc2LTUzLjE1aDExNi43NWwtMTcuMzIsNTMuMTVoNTEuOTRsMTcuMjEtNTMuMTVoNTguNTNsNDMuNTQtMzMuNzJoLTkxLjAxTDQzNi41MiwwaC01MkwxODYuMjMsMTUzLjQySDEwNy44NWwyMS42Mi02Ni40TDAsMTg3LjE0SDE0Mi42MmwtNjguNjcsNTMuMVpNMzYyLjk2LDY2LjQ1bC0yOC4yNyw4Ni45N2gtODQuMTdsMTEyLjQzLTg2Ljk3WiIvPgo8L3N2Zz4=',
   williams:
@@ -108,6 +110,13 @@ registerAliases('kick_sauber', [
   'kick sauber f1 team'
 ]);
 registerAliases('sauber', ['sauber f1 team', 'sauber formula 1 team', 'sauber']);
+registerAliases('audi', [
+  'audi ag',
+  'audi f1 team',
+  'audi sport formula one team',
+  'audi formula racing',
+  'audi'
+]);
 registerAliases('alphatauri', ['alpha tauri', 'alpha-tauri', 'scuderia alphatauri', 'alphatauri', 'alphatauri honda']);
 registerAliases('toro_rosso', ['toro rosso', 'scuderia toro rosso', 'tororosso']);
 registerAliases('alfa_romeo', ['alfa romeo', 'alfa-romeo', 'alfaromeo', 'alfa romeo racing', 'alfa']);
