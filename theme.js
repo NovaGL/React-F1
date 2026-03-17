@@ -304,19 +304,19 @@ export const driverCloudinaryMap = {
 };
 
 // Build a Cloudinary headshot URL using the driver code map (for drivers we know)
-export const getDriverCloudinaryUrl = (driverCode, width = 720) => {
+export const getDriverCloudinaryUrl = (driverCode, width = 720, year = CURRENT_YEAR) => {
   if (!driverCode) return null;
   const lookupKey = driverCode.toString().toUpperCase();
   const driverInfo = driverCloudinaryMap[lookupKey];
   if (!driverInfo) return null;
 
   const { code, team } = driverInfo;
-  return `https://media.formula1.com/image/upload/c_fill,w_${width}/q_auto/v1740000000/common/f1/${CURRENT_YEAR}/${team}/${code}01/${CURRENT_YEAR}${team}${code}01right.webp`;
+  return `https://media.formula1.com/image/upload/c_fill,w_${width}/q_auto/v1740000000/common/f1/${year}/${team}/${code}01/${year}${team}${code}01right.webp`;
 };
 
 // Build a Cloudinary headshot URL dynamically from a driver object + team — works for
 // any driver whose given/family name follow the standard first3+first3 code convention.
-export const getDriverCloudinaryUrlFromObject = (driver, teamId, width = 720) => {
+export const getDriverCloudinaryUrlFromObject = (driver, teamId, width = 720, year = CURRENT_YEAR) => {
   if (!driver) return null;
   const givenName = driver.givenName || driver.Driver?.givenName;
   const familyName = driver.familyName || driver.Driver?.familyName;
@@ -333,7 +333,7 @@ export const getDriverCloudinaryUrlFromObject = (driver, teamId, width = 720) =>
   const teamSlug = canonicalTeam ? CLOUDINARY_TEAM_SLUGS[canonicalTeam] : null;
   if (!teamSlug) return null;
 
-  return `https://media.formula1.com/image/upload/c_fill,w_${width}/q_auto/v1740000000/common/f1/${CURRENT_YEAR}/${teamSlug}/${code}01/${CURRENT_YEAR}${teamSlug}${code}01right.webp`;
+  return `https://media.formula1.com/image/upload/c_fill,w_${width}/q_auto/v1740000000/common/f1/${year}/${teamSlug}/${code}01/${year}${teamSlug}${code}01right.webp`;
 };
 
 // Drivers no longer on the current grid — map to their last active season for headshots
@@ -367,7 +367,7 @@ const normalizeDriverSlug = (name) => {
 };
 
 export const getDriverHeadshotUrl = (driver, options = {}) => {
-  const { width = 720 } = options;
+  const { width = 720, year } = options;
 
   if (!driver) return null;
 
@@ -389,8 +389,8 @@ export const getDriverHeadshotUrl = (driver, options = {}) => {
   if (!lastName) return null;
 
   const slug = normalizeDriverSlug(lastName);
-  // Use the driver's last active season, or default to current year for active drivers
-  const primarySeason = DRIVER_LAST_SEASON[slug] || String(CURRENT_YEAR);
+  // If a specific year is requested, use it directly; otherwise use last active season or current year
+  const primarySeason = year ? String(year) : (DRIVER_LAST_SEASON[slug] || String(CURRENT_YEAR));
   return buildF1HeadshotUrl(primarySeason, slug);
 };
 

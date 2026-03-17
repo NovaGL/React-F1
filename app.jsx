@@ -604,7 +604,7 @@ const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, las
                                         <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-900 mx-3"
                                             style={{ borderColor: teamColor }}>
                                             <img
-                                                src={getDriverCloudinaryUrl(standing.Driver.code, 64) || getDriverCloudinaryUrlFromObject(standing.Driver, standing.Constructors?.[0]?.constructorId, 64) || getDriverHeadshotUrl(standing.Driver)}
+                                                src={getDriverCloudinaryUrl(standing.Driver.code, 64, selectedYear) || getDriverCloudinaryUrlFromObject(standing.Driver, standing.Constructors?.[0]?.constructorId, 64, selectedYear) || getDriverHeadshotUrl(standing.Driver, { year: selectedYear })}
                                                 alt={standing.Driver.familyName}
                                                 className="w-full h-full object-contain"
                                                 onError={(e) => handleDriverImageError(e, standing.Driver, getTeamColor(standing.Constructors[0]?.constructorId))}
@@ -1091,7 +1091,7 @@ const DriverStandingsCard = ({ standings, loading }) => {
     
     {/* Driver Photo - fills frame (will scale to fit) */}
     <img
-        src={getDriverCloudinaryUrl(standing.Driver.code, 720) || getDriverCloudinaryUrlFromObject(standing.Driver, standing.Constructors?.[0]?.constructorId, 720) || getDriverHeadshotUrl(standing.Driver)}
+        src={getDriverCloudinaryUrl(standing.Driver.code, 720, selectedYear) || getDriverCloudinaryUrlFromObject(standing.Driver, standing.Constructors?.[0]?.constructorId, 720, selectedYear) || getDriverHeadshotUrl(standing.Driver, { year: selectedYear })}
         alt={`${standing.Driver.givenName} ${standing.Driver.familyName}`}
         className="absolute inset-0 w-full h-full object-cover object-top z-5"
         onError={(e) => {
@@ -1100,11 +1100,11 @@ const DriverStandingsCard = ({ standings, loading }) => {
             if (attempt === 0) {
                 e.target.setAttribute('data-fallback-attempt', '1');
                 const familyName = standing.Driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
-                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/${CURRENT_YEAR - 1}Drivers/${familyName}.png.transform/2col/image.png`;
+                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/${selectedYear - 1}Drivers/${familyName}.png.transform/2col/image.png`;
             } else if (attempt === 1) {
                 e.target.setAttribute('data-fallback-attempt', '2');
                 const familyName = standing.Driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
-                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/${CURRENT_YEAR - 2}Drivers/${familyName}.png.transform/2col/image.png`;
+                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/${selectedYear - 2}Drivers/${familyName}.png.transform/2col/image.png`;
             } else {
                 // Hide if all fallbacks fail
                 e.target.style.display = 'none';
