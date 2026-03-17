@@ -606,7 +606,7 @@ const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, las
                                             <img
                                                 src={getDriverCloudinaryUrl(standing.Driver.code, 64, selectedYear) || getDriverCloudinaryUrlFromObject(standing.Driver, standing.Constructors?.[0]?.constructorId, 64, selectedYear) || getDriverHeadshotUrl(standing.Driver, { year: selectedYear })}
                                                 alt={standing.Driver.familyName}
-                                                className="w-full h-full object-contain"
+                                                className="w-full h-full object-cover object-top"
                                                 onError={(e) => handleDriverImageError(e, standing.Driver, getTeamColor(standing.Constructors[0]?.constructorId))}
                                             />
                                         </div>
