@@ -35,7 +35,7 @@ export const TEAM_LOGOS = {
   mercedes: 'https://cdn.brandfetch.io/idsWGwlSmy/theme/light/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1728451883920',
   sauber: 'https://www.f1manager.com/_nuxt/img/sauber.b72322a.svg',
   kick_sauber: 'https://www.f1manager.com/_nuxt/img/sauber.b72322a.svg',
-  audi: 'https://cdn.brandfetch.io/idBLhp1YWf/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX',
+  audi: 'https://media.formula1.com/image/upload/c_lfill,w_48/q_auto/v1740000000/common/f1/2026/audi/2026audilogowhite.webp',
   cadillac: 'https://cdn.brandfetch.io/idqku3B0R9/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX',
   alpine:
     'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NzcuNTggMjQwLjI4Ij4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjZmZmOwogICAgICB9CiAgICA8L3N0eWxlPgogIDwvZGVmcz4KICA8cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik03My45NSwyNDAuMjRsNjQuMjIsLjA1LDY4Ljc2LTUzLjE1aDExNi43NWwtMTcuMzIsNTMuMTVoNTEuOTRsMTcuMjEtNTMuMTVoNTguNTNsNDMuNTQtMzMuNzJoLTkxLjAxTDQzNi41MiwwaC01MkwxODYuMjMsMTUzLjQySDEwNy44NWwyMS42Mi02Ni40TDAsMTg3LjE0SDE0Mi42MmwtNjguNjcsNTMuMVpNMzYyLjk2LDY2LjQ1bC0yOC4yNyw4Ni45N2gtODQuMTdsMTEyLjQzLTg2Ljk3WiIvPgo8L3N2Zz4=',
