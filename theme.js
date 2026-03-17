@@ -370,6 +370,15 @@ export const getDriverHeadshotUrl = (driver, options = {}) => {
 
   if (!driver) return null;
 
+  // For known 2026 drivers, use Cloudinary (same source as large images) unless a specific year is requested
+  if (!year && typeof driver !== 'string') {
+    const code = driver.code || driver.Driver?.code || driver.driver?.code;
+    if (code) {
+      const cloudinaryUrl = getDriverCloudinaryUrl(code, width);
+      if (cloudinaryUrl) return cloudinaryUrl;
+    }
+  }
+
   let lastName;
 
   // Handle string input (driver name)

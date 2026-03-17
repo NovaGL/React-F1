@@ -27,18 +27,8 @@ const handleDriverImageError = (e, driver, teamColor) => {
         e.target.setAttribute('data-fallback-attempt', '1');
         e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/${CURRENT_YEAR - 1}Drivers/${familyName}.png.transform/2col/image.png`;
     } else if (attempt === 1) {
-        // Second fallback: Try Cloudinary cutout image (works for drivers in driverCloudinaryMap)
-        const cloudinaryUrl = driver.code ? getDriverCloudinaryUrl(driver.code) : null;
-        if (cloudinaryUrl) {
-            e.target.setAttribute('data-fallback-attempt', '3');
-            e.target.src = cloudinaryUrl;
-        } else {
-            e.target.setAttribute('data-fallback-attempt', '2');
-            e.target.src = `https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/${CURRENT_YEAR}/fallback/driver/${CURRENT_YEAR}fallbackdriverrightarmscrossed.webp`;
-        }
-    } else if (attempt === 2) {
-        // Third fallback: Try generic F1 fallback image
-        e.target.setAttribute('data-fallback-attempt', '3');
+        // Second fallback: Try generic F1 fallback image
+        e.target.setAttribute('data-fallback-attempt', '2');
         e.target.src = `https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/${CURRENT_YEAR}/fallback/driver/${CURRENT_YEAR}fallbackdriverrightarmscrossed.webp`;
     } else {
         // Final fallback: Show driver code or initials with team color
