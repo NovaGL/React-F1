@@ -20,7 +20,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 // Reusable driver image error handler to prevent infinite reload loops
 const handleDriverImageError = (e, driver, teamColor) => {
     const attempt = parseInt(e.target.getAttribute('data-fallback-attempt') || '0');
-    const familyName = driver.familyName.toLowerCase();
+    const familyName = driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
 
     if (attempt === 0) {
         // First fallback: Try previous year driver image
@@ -432,8 +432,8 @@ const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, las
                                     borderLeft: `4px solid ${getTeamColor(driverStandings[0].Constructors[0]?.constructorId)}`
                                 }}>
                                 <div className="p-3 flex items-center flex-1 gap-4">
-                                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-900 flex-shrink-0"
-                                        style={{ borderColor: getTeamColor(driverStandings[0].Constructors[0]?.constructorId) }}>
+                                    <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0"
+                                        style={{ borderColor: getTeamColor(driverStandings[0].Constructors[0]?.constructorId), backgroundColor: getTeamColor(driverStandings[0].Constructors[0]?.constructorId) }}>
                                         <img
                                             src={getDriverHeadshotUrl(driverStandings[0].Driver)}
                                             alt={driverStandings[0].Driver.familyName}
@@ -601,8 +601,8 @@ const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, las
                                             borderLeft: `4px solid ${teamColor}`
                                         }}>
                                         <div className="w-8 text-center font-bold text-gray-400">{index + 1}</div>
-                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-900 mx-3"
-                                            style={{ borderColor: teamColor }}>
+                                        <div className="w-10 h-10 rounded-full overflow-hidden mx-3"
+                                            style={{ borderColor: teamColor, backgroundColor: teamColor }}>
                                             <img
                                                 src={getDriverHeadshotUrl(standing.Driver) || getDriverCloudinaryUrl(standing.Driver.code, 64) || getDriverCloudinaryUrlFromObject(standing.Driver, standing.Constructors?.[0]?.constructorId, 64)}
                                                 alt={standing.Driver.familyName}
@@ -847,7 +847,7 @@ const DriverStandingsCard = ({ standings, loading }) => {
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="text-2xl font-bold text-white w-8 text-center">{standing.position}</div>
-                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-900">
+                                    <div className="w-12 h-12 rounded-full overflow-hidden" style={{ backgroundColor: teamColor }}>
                                         <img
                                             src={getDriverHeadshotUrl(standing.Driver)}
                                             alt={standing.Driver.familyName}
@@ -996,8 +996,8 @@ const DriverStandingsCard = ({ standings, loading }) => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-900"
-                                                    style={{ borderColor: teamColor }}>
+                                                <div className="w-12 h-12 rounded-full overflow-hidden"
+                                                    style={{ borderColor: teamColor, backgroundColor: teamColor }}>
                                                 <img
     src={getDriverHeadshotUrl(standing.Driver)}
     alt={standing.Driver.familyName}
@@ -1586,7 +1586,7 @@ const ConstructorDetails = ({ standing, teamColor }) => {
                             className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50 hover:border-gray-600 transition-all"
                         >
                             <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
+                                <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0" style={{ backgroundColor: teamColor }}>
                                     <img
                                         src={getDriverHeadshotUrl(driver.Driver)}
                                         alt={driver.Driver.familyName}
@@ -2200,7 +2200,7 @@ const LapTimeChart = ({ race }) => {
                                         borderColor: teamColor
                                     }}
                                 >
-                                    <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
+                                    <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0" style={{ backgroundColor: teamColor }}>
                                         <img
                                             src={getDriverHeadshotUrl(`${driverData.driver.givenName} ${driverData.driver.familyName}`)}
                                             alt={driverData.driver.familyName}
@@ -2258,8 +2258,8 @@ const LapTimeChart = ({ race }) => {
                                     disabled={!driverData.hasLapData}
                                     className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left ${driverData.hasLapData ? 'hover:bg-gray-700' : 'opacity-60 cursor-not-allowed'}`}
                                 >
-                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-900 flex-shrink-0 ring-2"
-                                        style={{ ringColor: teamColor }}>
+                                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ring-2"
+                                        style={{ ringColor: teamColor, backgroundColor: teamColor }}>
                                         <img
                                             src={getDriverHeadshotUrl(`${driverData.driver.givenName} ${driverData.driver.familyName}`)}
                                             alt={driverData.driver.familyName}
@@ -2466,7 +2466,7 @@ const RaceCard = ({ race, isExpanded, onToggle, onImageClick }) => {
                                 {/* Driver Name with Avatar */}
                                 <td className="px-3 py-3">
                                     <div className="flex items-center">
-                                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-900 mx-3" style={{ borderColor: teamColor }}>
+                                        <div className="w-10 h-10 rounded-full overflow-hidden mx-3" style={{ borderColor: teamColor, backgroundColor: teamColor }}>
                                             <img
                                                 src={getDriverHeadshotUrl(result.Driver)}
                                                 alt={result.Driver.familyName}
@@ -2545,7 +2545,7 @@ const RaceCard = ({ race, isExpanded, onToggle, onImageClick }) => {
                         style={{ backgroundColor: `${teamColor}15`, borderLeft: `4px solid ${teamColor}` }}
                     >
                         <div className="w-8 text-center font-bold text-gray-400">{result.position}</div>
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-900 mx-3" style={{ borderColor: teamColor }}>
+                        <div className="w-10 h-10 rounded-full overflow-hidden mx-3" style={{ borderColor: teamColor, backgroundColor: teamColor }}>
                             <img
                                 src={getDriverHeadshotUrl(result.Driver)}
                                 alt={result.Driver.familyName}
@@ -2599,8 +2599,8 @@ const RaceCard = ({ race, isExpanded, onToggle, onImageClick }) => {
                                                     <div className="w-8 text-center font-bold text-yellow-400">
                                                         {lapData.fastestLap.rank}
                                                     </div>
-                                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-900 mx-3"
-                                                        style={{ borderColor: teamColor }}>
+                                                    <div className="w-10 h-10 rounded-full overflow-hidden mx-3"
+                                                        style={{ borderColor: teamColor, backgroundColor: teamColor }}>
                                                         <img
                                                             src={getDriverHeadshotUrl(lapData.driver)}
                                                             alt={lapData.driver.familyName}
