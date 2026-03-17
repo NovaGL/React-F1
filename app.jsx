@@ -7,6 +7,7 @@ import {
     getTeamLogoUrl,
     getDriverHeadshotUrl,
     getDriverCloudinaryUrl,
+    getDriverCloudinaryUrlFromObject,
     darkenColor
 } from './theme';
 import { getCircuitData, getCircuitImageUrl } from './circuit-data';
@@ -22,13 +23,13 @@ const handleDriverImageError = (e, driver, teamColor) => {
     const familyName = driver.familyName.toLowerCase();
 
     if (attempt === 0) {
-        // First fallback: Try 2024 driver image
+        // First fallback: Try previous year driver image
         e.target.setAttribute('data-fallback-attempt', '1');
-        e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
+        e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/${CURRENT_YEAR - 1}Drivers/${familyName}.png.transform/2col/image.png`;
     } else if (attempt === 1) {
-        // Second fallback: Try generic F1 fallback
+        // Second fallback: Try generic F1 fallback image
         e.target.setAttribute('data-fallback-attempt', '2');
-        e.target.src = 'https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/2025/fallback/driver/2025fallbackdriverrightarmscrossed.webp';
+        e.target.src = `https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000000/common/f1/${CURRENT_YEAR}/fallback/driver/${CURRENT_YEAR}fallbackdriverrightarmscrossed.webp`;
     } else {
         // Final fallback: Show driver code or initials with team color
         e.target.style.display = 'none';
@@ -1090,22 +1091,20 @@ const DriverStandingsCard = ({ standings, loading }) => {
     
     {/* Driver Photo - fills frame (will scale to fit) */}
     <img
-        src={getDriverCloudinaryUrl(standing.Driver.code, 720) || getDriverHeadshotUrl(standing.Driver)}
+        src={getDriverCloudinaryUrl(standing.Driver.code, 720) || getDriverCloudinaryUrlFromObject(standing.Driver, standing.Constructors?.[0]?.constructorId, 720) || getDriverHeadshotUrl(standing.Driver)}
         alt={`${standing.Driver.givenName} ${standing.Driver.familyName}`}
         className="absolute inset-0 w-full h-full object-cover object-top z-5"
         onError={(e) => {
             const attempt = parseInt(e.target.getAttribute('data-fallback-attempt') || '0');
 
             if (attempt === 0) {
-                // Try 2024 as fallback
                 e.target.setAttribute('data-fallback-attempt', '1');
                 const familyName = standing.Driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
-                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2024Drivers/${familyName}.png.transform/2col/image.png`;
+                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/${CURRENT_YEAR - 1}Drivers/${familyName}.png.transform/2col/image.png`;
             } else if (attempt === 1) {
-                // Try 2023 as fallback (for older drivers like de Vries)
                 e.target.setAttribute('data-fallback-attempt', '2');
                 const familyName = standing.Driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
-                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/2023Drivers/${familyName}.png.transform/2col/image.png`;
+                e.target.src = `https://www.formula1.com/content/dam/fom-website/drivers/${CURRENT_YEAR - 2}Drivers/${familyName}.png.transform/2col/image.png`;
             } else {
                 // Hide if all fallbacks fail
                 e.target.style.display = 'none';

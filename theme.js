@@ -1,6 +1,8 @@
 // Shared styling configuration for the React F1 dashboard
 // Centralizes team branding, color utilities, and media helpers
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export const DEFAULT_TEAM_COLOR = '#6b7280'; // Tailwind slate-500
 
 export const TEAM_COLORS = {
@@ -18,6 +20,7 @@ export const TEAM_COLORS = {
   sauber: '#01C00E', // Official 2025: Bright green
   kick_sauber: '#01C00E', // Kick Sauber green
   audi: '#BB0A21', // Audi F1 (from 2026, replacing Sauber)
+  cadillac: '#003594', // Cadillac F1 (new team from 2026)
   alfa_romeo: '#900000', // Legacy support
   alphatauri: '#2B4562', // Legacy support
   renault: '#FFED00', // Legacy support
@@ -33,6 +36,7 @@ export const TEAM_LOGOS = {
   sauber: 'https://www.f1manager.com/_nuxt/img/sauber.b72322a.svg',
   kick_sauber: 'https://www.f1manager.com/_nuxt/img/sauber.b72322a.svg',
   audi: 'https://cdn.brandfetch.io/idBLhp1YWf/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX',
+  cadillac: 'https://cdn.brandfetch.io/idqku3B0R9/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX',
   alpine:
     'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NzcuNTggMjQwLjI4Ij4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjZmZmOwogICAgICB9CiAgICA8L3N0eWxlPgogIDwvZGVmcz4KICA8cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik03My45NSwyNDAuMjRsNjQuMjIsLjA1LDY4Ljc2LTUzLjE1aDExNi43NWwtMTcuMzIsNTMuMTVoNTEuOTRsMTcuMjEtNTMuMTVoNTguNTNsNDMuNTQtMzMuNzJoLTkxLjAxTDQzNi41MiwwaC01MkwxODYuMjMsMTUzLjQySDEwNy44NWwyMS42Mi02Ni40TDAsMTg3LjE0SDE0Mi42MmwtNjguNjcsNTMuMVpNMzYyLjk2LDY2LjQ1bC0yOC4yNyw4Ni45N2gtODQuMTdsMTEyLjQzLTg2Ljk3WiIvPgo8L3N2Zz4=',
   williams:
@@ -116,6 +120,13 @@ registerAliases('audi', [
   'audi sport formula one team',
   'audi formula racing',
   'audi'
+]);
+registerAliases('cadillac', [
+  'cadillac f1 team',
+  'andretti cadillac',
+  'andretti global',
+  'cadillac andretti',
+  'cadillac'
 ]);
 registerAliases('alphatauri', ['alpha tauri', 'alpha-tauri', 'scuderia alphatauri', 'alphatauri', 'alphatauri honda']);
 registerAliases('toro_rosso', ['toro rosso', 'scuderia toro rosso', 'tororosso']);
@@ -234,30 +245,65 @@ export const darkenColor = (hexColor, amount = 0.35) => adjustColor(hexColor, -M
 
 export const lightenColor = (hexColor, amount = 0.35) => adjustColor(hexColor, Math.abs(amount));
 
-export const driverCloudinaryMap = {
-  GAS: { code: 'piegas', team: 'alpine' },
-  COL: { code: 'fracol', team: 'alpine' },
-  DOO: { code: 'jacdoo', team: 'alpine' },
-  OCO: { code: 'estoco', team: 'haas' },
-  BEA: { code: 'olibea', team: 'haas' },
-  NOR: { code: 'lannor', team: 'mclaren' },
-  PIA: { code: 'oscpia', team: 'mclaren' },
-  LEC: { code: 'chalec', team: 'ferrari' },
-  HAM: { code: 'lewham', team: 'ferrari' },
-  VER: { code: 'maxver', team: 'redbullracing' },
-  TSU: { code: 'yuktsu', team: 'redbullracing' },
-  RUS: { code: 'georus', team: 'mercedes' },
-  ANT: { code: 'andant', team: 'mercedes' },
-  ALO: { code: 'feralo', team: 'astonmartin' },
-  STR: { code: 'lanstr', team: 'astonmartin' },
-  SAI: { code: 'carsai', team: 'williams' },
-  ALB: { code: 'alealb', team: 'williams' },
-  LAW: { code: 'lialaw', team: 'racingbulls' },
-  HAD: { code: 'isahad', team: 'racingbulls' },
-  HUL: { code: 'nichul', team: 'kicksauber' },
-  BOR: { code: 'gabbor', team: 'kicksauber' }
+// Maps canonical team IDs to their slug used in F1 media Cloudinary URLs
+const CLOUDINARY_TEAM_SLUGS = {
+  red_bull: 'redbullracing',
+  rb: 'racingbulls',
+  racing_bulls: 'racingbulls',
+  ferrari: 'ferrari',
+  mclaren: 'mclaren',
+  mercedes: 'mercedes',
+  aston_martin: 'astonmartin',
+  alpine: 'alpine',
+  williams: 'williams',
+  haas: 'haas',
+  kick_sauber: 'kicksauber',
+  sauber: 'kicksauber',
+  audi: 'audi',
+  cadillac: 'cadillac',
+  alfa_romeo: 'alfaromeo',
+  alphatauri: 'alphatauri',
+  toro_rosso: 'tororosso'
 };
 
+// 2026 grid — code = first3(givenName) + first3(familyName), team = Cloudinary slug
+export const driverCloudinaryMap = {
+  // Mercedes
+  RUS: { code: 'georus',  team: 'mercedes' },
+  ANT: { code: 'andant',  team: 'mercedes' },      // Andrea Kimi Antonelli
+  // Ferrari
+  LEC: { code: 'chalec',  team: 'ferrari' },
+  HAM: { code: 'lewham',  team: 'ferrari' },
+  // Red Bull Racing (Hadjar promoted from Racing Bulls)
+  VER: { code: 'maxver',  team: 'redbullracing' },
+  HAD: { code: 'isahad',  team: 'redbullracing' },
+  // Racing Bulls (Lawson stays; Lindblad replaces Hadjar)
+  LAW: { code: 'lialaw',  team: 'racingbulls' },
+  LIN: { code: 'arvlin',  team: 'racingbulls' },   // Arvid Lindblad — new 2026
+  // McLaren
+  NOR: { code: 'lannor',  team: 'mclaren' },
+  PIA: { code: 'oscpia',  team: 'mclaren' },
+  // Haas
+  OCO: { code: 'estoco',  team: 'haas' },
+  BEA: { code: 'olibea',  team: 'haas' },
+  // Alpine (Colapinto keeps seat; Doohan dropped)
+  GAS: { code: 'piegas',  team: 'alpine' },
+  COL: { code: 'fracol',  team: 'alpine' },
+  // Audi (rebranded from Kick Sauber)
+  HUL: { code: 'nichul',  team: 'audi' },
+  BOR: { code: 'gabbor',  team: 'audi' },
+  // Williams
+  SAI: { code: 'carsai',  team: 'williams' },
+  ALB: { code: 'alealb',  team: 'williams' },
+  // Aston Martin
+  ALO: { code: 'feralo',  team: 'astonmartin' },
+  STR: { code: 'lanstr',  team: 'astonmartin' },
+  // Cadillac — new 11th team 2026
+  PER: { code: 'serper',  team: 'cadillac' },      // Sergio Pérez
+  BOT: { code: 'valbot',  team: 'cadillac' },      // Valtteri Bottas
+};
+
+// Build a Cloudinary headshot URL using the driver code map (for drivers we know)
 export const getDriverCloudinaryUrl = (driverCode, width = 720) => {
   if (!driverCode) return null;
   const lookupKey = driverCode.toString().toUpperCase();
@@ -265,15 +311,36 @@ export const getDriverCloudinaryUrl = (driverCode, width = 720) => {
   if (!driverInfo) return null;
 
   const { code, team } = driverInfo;
-  // Note: v1740000000 is the Cloudinary version timestamp
-  return `https://media.formula1.com/image/upload/c_fill,w_${width}/q_auto/v1740000000/common/f1/2025/${team}/${code}01/2025${team}${code}01right.webp`;
+  return `https://media.formula1.com/image/upload/c_fill,w_${width}/q_auto/v1740000000/common/f1/${CURRENT_YEAR}/${team}/${code}01/${CURRENT_YEAR}${team}${code}01right.webp`;
 };
 
-// Drivers who don't have 2025 headshots - map to their last active season
+// Build a Cloudinary headshot URL dynamically from a driver object + team — works for
+// any driver whose given/family name follow the standard first3+first3 code convention.
+export const getDriverCloudinaryUrlFromObject = (driver, teamId, width = 720) => {
+  if (!driver) return null;
+  const givenName = driver.givenName || driver.Driver?.givenName;
+  const familyName = driver.familyName || driver.Driver?.familyName;
+  if (!givenName || !familyName) return null;
+
+  const normalize = (str) => str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+
+  const code = normalize(givenName).slice(0, 3) + normalize(familyName).slice(0, 3);
+  const canonicalTeam = normalizeTeamId(teamId);
+  const teamSlug = canonicalTeam ? CLOUDINARY_TEAM_SLUGS[canonicalTeam] : null;
+  if (!teamSlug) return null;
+
+  return `https://media.formula1.com/image/upload/c_fill,w_${width}/q_auto/v1740000000/common/f1/${CURRENT_YEAR}/${teamSlug}/${code}01/${CURRENT_YEAR}${teamSlug}${code}01right.webp`;
+};
+
+// Drivers no longer on the current grid — map to their last active season for headshots
 const DRIVER_LAST_SEASON = {
-  'colapinto': '2024',
-  'perez': '2024',      // Sergio Pérez (left Red Bull after 2024)
-  'bottas': '2024',     // Valtteri Bottas (left Sauber after 2024)
+  'tsunoda': '2025',    // Yuki Tsunoda (left Red Bull after 2025)
+  'doohan': '2025',     // Jack Doohan (dropped from Alpine after 2025)
+  'colapinto': '2025',  // Franco Colapinto (was at Alpine; stays 2026 — see map)
   'ricciardo': '2024',  // Daniel Ricciardo (left RB after 2024)
   'zhou': '2024',       // Zhou Guanyu (left Sauber after 2024)
   'magnussen': '2024',  // Kevin Magnussen (left Haas after 2024)
@@ -322,8 +389,8 @@ export const getDriverHeadshotUrl = (driver, options = {}) => {
   if (!lastName) return null;
 
   const slug = normalizeDriverSlug(lastName);
-  // Use the driver's last active season, or default to 2025 for current drivers
-  const primarySeason = DRIVER_LAST_SEASON[slug] || '2025';
+  // Use the driver's last active season, or default to current year for active drivers
+  const primarySeason = DRIVER_LAST_SEASON[slug] || String(CURRENT_YEAR);
   return buildF1HeadshotUrl(primarySeason, slug);
 };
 
