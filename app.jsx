@@ -604,7 +604,7 @@ const DashboardOverview = ({ nextRace, countdown, nextRaceLoading, lastRace, las
                                         <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-900 mx-3"
                                             style={{ borderColor: teamColor }}>
                                             <img
-                                                src={getDriverHeadshotUrl(standing.Driver)}
+                                                src={getDriverCloudinaryUrl(standing.Driver.code, 64) || getDriverCloudinaryUrlFromObject(standing.Driver, standing.Constructors?.[0]?.constructorId, 64) || getDriverHeadshotUrl(standing.Driver)}
                                                 alt={standing.Driver.familyName}
                                                 className="w-full h-full object-contain"
                                                 onError={(e) => handleDriverImageError(e, standing.Driver, getTeamColor(standing.Constructors[0]?.constructorId))}
