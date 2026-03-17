@@ -340,7 +340,6 @@ export const getDriverCloudinaryUrlFromObject = (driver, teamId, width = 720, ye
 const DRIVER_LAST_SEASON = {
   'tsunoda': '2025',    // Yuki Tsunoda (left Red Bull after 2025)
   'doohan': '2025',     // Jack Doohan (dropped from Alpine after 2025)
-  'colapinto': '2025',  // Franco Colapinto (was at Alpine; stays 2026 — see map)
   'ricciardo': '2024',  // Daniel Ricciardo (left RB after 2024)
   'zhou': '2024',       // Zhou Guanyu (left Sauber after 2024)
   'magnussen': '2024',  // Kevin Magnussen (left Haas after 2024)

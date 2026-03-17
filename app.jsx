@@ -20,7 +20,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 // Reusable driver image error handler to prevent infinite reload loops
 const handleDriverImageError = (e, driver, teamColor) => {
     const attempt = parseInt(e.target.getAttribute('data-fallback-attempt') || '0');
-    const familyName = driver.familyName.toLowerCase();
+    const familyName = driver.familyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
 
     if (attempt === 0) {
         // First fallback: Try previous year driver image
